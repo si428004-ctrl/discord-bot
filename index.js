@@ -283,26 +283,28 @@ const MEMBER_STATS_CHANNEL_ID = "1429158078980423913";
 
 async function updateMemberCount(guild) {
   try {
+    // 🧠 natáhneme všechny členy, včetně offline
+    await guild.members.fetch();
+    const humans = guild.members.cache.filter(m => !m.user.bot).size;
     const channel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
-    if (!channel) return;
-    const count = guild.members.cache.filter(m => !m.user.bot).size;
-    await channel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${count}`).catch(() => {});
+    if (!channel) return console.warn("⚠️ Stats kanál nenalezen");
+    await channel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${humans}`).catch(() => {});
+    console.log(`📊 ServerStats aktualizován → ${humans} lidí`);
   } catch (err) {
-    console.error("⚠️ Chyba při updatu počtu členů:", err.message);
+    console.error("❌ Chyba při updateMemberCount:", err);
   }
 }
 
-// Aktualizuj při joinu/odchodu
+// 📈 Realtime update při join/leave
 client.on("guildMemberAdd", member => updateMemberCount(member.guild));
 client.on("guildMemberRemove", member => updateMemberCount(member.guild));
 
-// 💪 Po přihlášení natvrdo načti členy (fix 0 count)
+// 🚀 Po přihlášení aktualizuj s drobným zpožděním
 client.once("ready", async () => {
   const guild = client.guilds.cache.first();
   if (guild) {
-    await guild.members.fetch(); // 🧠 natáhne všechny členy z API
-    await updateMemberCount(guild);
-    console.log("📊 ServerStats aktualizován po fetchi členů");
+    // ⏳ 5 sekund delay, aby Discord API mělo připravenou cache
+    setTimeout(() => updateMemberCount(guild), 5000);
   }
 });
 
