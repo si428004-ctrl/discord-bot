@@ -285,20 +285,6 @@ client.on("guildMemberAdd", async member => {
 // ========== 📊 Server Stats (Voice kanál counter) ==========
 const MEMBER_STATS_CHANNEL_ID = "1429158078980423913";
 
-async function updateMemberCount(guild) {
-  try {
-    // 🧠 natáhneme všechny členy, včetně offline
-    await guild.members.fetch();
-    const humans = guild.members.cache.filter(m => !m.user.bot).size;
-    const channel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
-    if (!channel) return console.warn("⚠️ Stats kanál nenalezen");
-    await channel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${humans}`).catch(() => {});
-    console.log(`📊 ServerStats aktualizován → ${humans} lidí`);
-  } catch (err) {
-    console.error("❌ Chyba při updateMemberCount:", err);
-  }
-}
-
 let lastUpdate = 0;
 async function updateMemberCount(guild) {
   const now = Date.now();
