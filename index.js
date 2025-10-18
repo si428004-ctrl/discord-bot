@@ -380,37 +380,32 @@ client.once("ready", async () => {
 
 // 🧠 Reakce na příkaz
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isChatInputCommand() || interaction.commandName !== "clear") return;
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName !== "clear") return;
 
   const count = interaction.options.getInteger("pocet");
   if (count < 1 || count > 100) {
-    return interaction.reply({ content: "⚠️ Zadej číslo 1–100!", ephemeral: true });
+    return await interaction.reply({
+      content: "⚠️ Zadej číslo 1–100!",
+      flags: 64, // 👈 ephemeral
+    });
   }
 
   try {
-  const deleted = await interaction.channel.bulkDelete(count, true);
+    await interaction.deferReply({ flags: 64 }); // Tiché potvrzení, že bot pracuje
+    const deleted = await interaction.channel.bulkDelete(count, true);
 
-  // 💬 Pošli "deferred" odpověď, ať Discord ví, že na to reagujeme
-  await interaction.deferReply({ ephemeral: true });
+    // místo reply → jen log do konzole (ticho v chatu)
+    console.log(`🧹 Smazáno ${deleted.size} zpráv v kanálu ${interaction.channel.name}`);
 
-  // ✨ Po 0.5s smažeme odpověď, aby ji nikdo neviděl
-  setTimeout(async () => {
-    try {
-      await interaction.deleteReply();
-    } catch (e) {
-      console.warn("⚠️ Nepodařilo se smazat reply:", e.message);
-    }
-  }, 500);
-
-} catch (err) {
-  console.error("❌ Chyba při mazání zpráv:", err);
-  if (!interaction.deferred && !interaction.replied) {
-    await interaction.reply({ content: "❌ Nepodařilo se smazat zprávy.", ephemeral: true });
+    // po 1s odpověď zase smažeme (i kdyby existovala)
+    setTimeout(() => {
+      interaction.deleteReply().catch(() => {});
+    }, 1000);
+  } catch (err) {
+    console.error("❌ Chyba při mazání zpráv:", err);
   }
-}
-
 });
-
 
 client.login(process.env.BOT_TOKEN);
 
