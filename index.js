@@ -347,12 +347,16 @@ client.on("guildMemberRemove", member => {
 });
 client.on("guildMemberUpdate", async (oldMember, newMember) => {
   try {
-    // ⏳ Malý delay, aby se stihly propsat role na Discordu
+    // 🕓 Počkej 4 s, ať se všechny role propsají
     setTimeout(async () => {
       const freshMember = await newMember.guild.members.fetch(newMember.id);
+      
+      // 💡 Spusť oba countery s krátkým rozestupem
       await updateUnverifiedCount(freshMember.guild);
-      await updateMemberCount(freshMember.guild);
-    }, 3500);
+      setTimeout(() => updateMemberCount(freshMember.guild), 1000);
+
+      console.log(`🔁 Role změněna u ${freshMember.user.tag}, countery aktualizovány.`);
+    }, 4000);
   } catch (err) {
     console.error("⚠️ Chyba při guildMemberUpdate:", err);
   }
