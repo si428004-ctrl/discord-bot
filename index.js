@@ -11,7 +11,7 @@ app.get("/", (req, res) => res.send("✅ Bot is running!"));
 app.listen(PORT, () => {
   console.log(`🌐 Mini server běží na portu ${PORT}`);
 });
-}, 2000); // 2 vteřiny zpoždění
+
 
 // --- 🤖 Discord bot část --- //
 import { 
