@@ -333,42 +333,33 @@ async function updateUnverifiedCount(guild) {
 
 // 📈 Realtime update při join/leave (s delayem)
 client.on("guildMemberAdd", member => {
-  setTimeout(() => updateMemberCount(member.guild), 2000);
+  setTimeout(() => {
+    updateMemberCount(member.guild);
+    updateUnverifiedCount(member.guild);
+  }, 2000);
 });
+
 client.on("guildMemberRemove", member => {
-  setTimeout(() => updateMemberCount(member.guild), 2000);
+  setTimeout(() => {
+    updateMemberCount(member.guild);
+    updateUnverifiedCount(member.guild);
+  }, 2000);
 });
-// 🧮 Update i pro Unverified counter
-client.on("guildMemberAdd", member => {
-  setTimeout(() => updateUnverifiedCount(member.guild), 2000);
-});
-client.on("guildMemberRemove", member => {
-  setTimeout(() => updateUnverifiedCount(member.guild), 2000);
-});
+
+// 🔁 Realtime při změně rolí
 client.on("guildMemberUpdate", async (oldMember, newMember) => {
   try {
-    // 🕓 Počkej 4 s, ať se všechny role propsají
+    console.log(`🔁 Role změněna u ${newMember.user.tag}, čekám na refresh...`);
+    // 🕓 Počkej 4 s, ať se role 100 % propsají
     setTimeout(async () => {
       const freshMember = await newMember.guild.members.fetch(newMember.id);
-      
-      // 💡 Spusť oba countery s krátkým rozestupem
       await updateUnverifiedCount(freshMember.guild);
       setTimeout(() => updateMemberCount(freshMember.guild), 1000);
-
-      console.log(`🔁 Role změněna u ${freshMember.user.tag}, countery aktualizovány.`);
+      console.log(`♻️ Countery aktualizovány po změně rolí (${freshMember.user.tag})`);
     }, 4000);
   } catch (err) {
     console.error("⚠️ Chyba při guildMemberUpdate:", err);
   }
-});
-
-// 📈 Realtime update při join/leave (s delayem)
-client.on("guildMemberAdd", member => {
-  setTimeout(() => updateMemberCount(member.guild), 2000);
-});
-
-client.on("guildMemberRemove", member => {
-  setTimeout(() => updateMemberCount(member.guild), 2000);
 });
 
 // 🚀 Po přihlášení aktualizuj s drobným zpožděním
