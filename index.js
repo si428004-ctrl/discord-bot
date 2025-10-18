@@ -44,7 +44,7 @@ client.once('ready', () => {
   // 🔔 Pošle zprávu do log kanálu po restartu
   const channel = client.channels.cache.get('1421633740689506405');
   if (channel) {
-    channel.send('🟢 Bot je zpět online a ready to verify users 😎');
+    channel.send('🟢  Bot je zpět online');
   } else {
     console.warn('⚠️ Kanál s ID 1421633740689506405 nebyl nalezen.');
   }
