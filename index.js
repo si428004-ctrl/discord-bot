@@ -380,25 +380,28 @@ client.once("ready", async () => {
 
 // 🧠 Reakce na příkaz
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-  if (interaction.commandName !== "clear") return;
+  if (!interaction.isChatInputCommand() || interaction.commandName !== "clear") return;
 
   const count = interaction.options.getInteger("pocet");
   if (count < 1 || count > 100) {
-    return await interaction.reply({ content: "⚠️ Zadej číslo 1–100!", ephemeral: true });
+    return interaction.reply({ content: "⚠️ Zadej číslo 1–100!", ephemeral: true });
   }
 
   try {
     const deleted = await interaction.channel.bulkDelete(count, true);
-    await interaction.reply({
-      content: `🧹 Smazáno **${deleted.size}** zpráv v ${interaction.channel}!`,
-      ephemeral: true
-    });
+    await interaction.reply({ content: `🧹 Smazáno ${deleted.size} zpráv.`, ephemeral: true });
+
+    // 👇 smaže odpověď po 1 vteřině
+    setTimeout(() => {
+      interaction.deleteReply().catch(() => {});
+    }, 1000);
+
   } catch (err) {
     console.error("❌ Chyba při mazání zpráv:", err);
-    await interaction.reply({ content: "❌ Nastala chyba při mazání zpráv.", ephemeral: true });
+    await interaction.reply({ content: "❌ Nepodařilo se smazat zprávy.", ephemeral: true });
   }
 });
+
 
 client.login(process.env.BOT_TOKEN);
 
