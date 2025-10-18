@@ -77,8 +77,7 @@ client.on('guildMemberAdd', async member => {
         .setTitle(`🆕 Nový člen na serveru`)
         .setDescription(`👤 **Uživatel:** <@${member.id}>\n📝 **Odpověď:**\n\n${msg.content || '*Žádná odpověď*'}`)
         .setColor('#ff0000')
-        .setTimestamp();
-
+        
       const logMsg = await logChannel.send({ embeds: [embed] });
 
       // ➕ Reakce pro schválení / odmítnutí
@@ -105,8 +104,7 @@ client.on('guildMemberAdd', async member => {
             const approvedEmbed = new EmbedBuilder()
               .setDescription(`<@${member.id}> byl schválen uživatelem <@${user.id}> ✅`)
               .setColor('#1df300')
-              .setTimestamp();
-
+              
             await logChannel.send({ embeds: [approvedEmbed] });
           } catch (e) {
             console.error('Chyba při přidávání role:', e);
@@ -120,8 +118,7 @@ client.on('guildMemberAdd', async member => {
             const deniedEmbed = new EmbedBuilder()
               .setDescription(`<@${member.id}> byl odmítnut uživatelem <@${user.id}> ❌`)
               .setColor('#ff0000')
-              .setTimestamp();
-
+              
             await logChannel.send({ embeds: [deniedEmbed] });
           } catch (e) {
             console.error('Chyba při kicku:', e);
@@ -349,7 +346,11 @@ client.on("guildMemberRemove", member => {
   setTimeout(() => updateUnverifiedCount(member.guild), 2000);
 });
 client.on("guildMemberUpdate", (oldMember, newMember) => {
-  setTimeout(() => updateUnverifiedCount(newMember.guild), 2000);
+  // 🧠 Po změně rolí zkontroluj oba countery
+  setTimeout(() => {
+    updateUnverifiedCount(newMember.guild);
+    updateMemberCount(newMember.guild);
+  }, 2000);
 });
 
 // 📈 Realtime update při join/leave (s delayem)
