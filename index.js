@@ -397,54 +397,48 @@ setInterval(() => {
     .catch((err) => console.error("⚠️ Chyba keepalive pingu:", err.message));
 }, 5 * 60 * 1000); // každých 5 minut
 
-// ========== ♻️ Auto-sync každé 3 vteřiny ==========
-let lastVerifiedCount = 0;
-let lastUnverifiedCount = 0;
+// ========== ♻️ Auto-sync každé 3 vteřiny (počítá přesné role) ==========
+let lastVerifiedCount = -1;
+let lastUnverifiedCount = -1;
 
 setInterval(async () => {
   try {
     const guild = client.guilds.cache.first();
     if (!guild) return;
 
-    await guild.members.fetch();
+    await guild.members.fetch(); // stáhne čerstvé role všech členů
 
-    // 💥 odstraníme Phoenixa z cache (pro jistotu)
+    // pro jistotu vyhoď bota z cache (někdy se duplikuje jako app user)
     guild.members.cache.delete(FALLEN_PHOENIX_ID);
 
-    // 🧮 spočítej aktuální stavy
+    // 🔒 jen lidi (bez botů) s KONKRÉTNÍ rolí
     const verifiedCount = guild.members.cache.filter(
-      m => !m.user.bot && !m.roles.cache.has(UNVERIFIED_ROLE_ID)
+      m => !m.user.bot && m.roles.cache.has(VERIFIED_ROLE_ID)
     ).size;
+
     const unverifiedCount = guild.members.cache.filter(
-      m => m.roles.cache.has(UNVERIFIED_ROLE_ID)
+      m => !m.user.bot && m.roles.cache.has(UNVERIFIED_ROLE_ID)
     ).size;
 
-    // ⚡ aktualizuj jen pokud se něco změnilo
-    if (
-      verifiedCount !== lastVerifiedCount ||
-      unverifiedCount !== lastUnverifiedCount
-    ) {
+    // aktualizuj jen když se čísla fakt změnila
+    if (verifiedCount !== lastVerifiedCount) {
       const memberChannel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
-      const unverifiedChannel = guild.channels.cache.get("1429189687288926379");
-
-      if (memberChannel)
-        await memberChannel
-          .setName(`🔢︱Mᴇᴍʙᴇʀs: ${verifiedCount}`)
-          .catch(() => {});
-      if (unverifiedChannel)
-        await unverifiedChannel
-          .setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${unverifiedCount}`)
-          .catch(() => {});
-
-      console.log(
-        `♻️ Auto-sync změna: Members=${verifiedCount}, Unverified=${unverifiedCount}`
-      );
-
-      // 💾 ulož nové hodnoty jako poslední známé
+      if (memberChannel) {
+        await memberChannel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${verifiedCount}`).catch(() => {});
+      }
       lastVerifiedCount = verifiedCount;
+      console.log(`♻️ Members sync → ${verifiedCount}`);
+    }
+
+    if (unverifiedCount !== lastUnverifiedCount) {
+      const unverifiedChannel = guild.channels.cache.get(UNVERIFIED_STATS_CHANNEL_ID || "1429189687288926379");
+      if (unverifiedChannel) {
+        await unverifiedChannel.setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${unverifiedCount}`).catch(() => {});
+      }
       lastUnverifiedCount = unverifiedCount;
+      console.log(`♻️ Unverified sync → ${unverifiedCount}`);
     }
   } catch (err) {
     console.error("❌ Chyba při auto-syncu:", err);
   }
-}, 3000); // každé 3 sekundy
+}, 3000);
