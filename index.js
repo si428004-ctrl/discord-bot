@@ -159,14 +159,6 @@ const ROLE_SELECT_COLOR = "#29AC5F";
 const ROLE_SELECT_THUMB = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png";
 const ROLE_SELECT_IMG = "https://www.metasrc.com/legacy/images/lanes/mid_icon.png";
 
-// ========== 🟢 Reaction Roles ==========
-const ROLE_SELECT_CHANNEL_ID = "1409197870518636554";
-const ROLE_SELECT_MESSAGE_TITLE = "Jakou linku mainíš?";
-const ROLE_SELECT_MESSAGE_DESC = "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!";
-const ROLE_SELECT_COLOR = "#29AC5F";
-const ROLE_SELECT_THUMB = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png";
-const ROLE_SELECT_IMG = "https://www.metasrc.com/legacy/images/lanes/mid_icon.png";
-
 // ✅ Tvoje emoji + jejich role
 const EMOJI_ROLE_MAP = {
   "<:adc:1423344369523495023>": "1423292319150506066",
@@ -178,7 +170,14 @@ const EMOJI_ROLE_MAP = {
 
 client.once("ready", async () => {
   const channel = await client.channels.fetch(ROLE_SELECT_CHANNEL_ID).catch(() => null);
-  if (!channel) return console.warn("⚠️ Reaction role kanál nenalezen");
+  if (!channel) return console.warn(⚠️ Reaction role kanál nenalezen");
+
+  // 💡 Získání všech emoji z guildy (nutné pro custom emoji)
+  const guild = client.guilds.cache.first();
+  if (guild) {
+    await guild.emojis.fetch().catch(() => {});
+    console.log(`🎨 Načteno ${guild.emojis.cache.size} emoji`);
+  }
 
   // 🧠 Hledáme existující zprávu
   const messages = await channel.messages.fetch({ limit: 10 }).catch(() => null);
