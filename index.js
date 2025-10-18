@@ -335,6 +335,35 @@ setInterval(async () => {
   }
 }, 35 * 1000);
 
+// ========== 🧹 CLEAR COMMAND ==========
+client.on("messageCreate", async (message) => {
+  // Ignoruj bota a DMs
+  if (message.author.bot || !message.guild) return;
+
+  // Povoleno jen adminům
+  if (!message.member.permissions.has("Administrator")) return;
+
+  // Příkaz musí začínat na /clear
+  if (message.content.startsWith("/clear")) {
+    const args = message.content.split(" ");
+    const count = parseInt(args[1]) || 0;
+
+    if (!count || count < 1 || count > 100) {
+      return message.reply(⚠️ Zadej prosím číslo 1–100, kolik zpráv chceš smazat.");
+    }
+
+    try {
+      await message.channel.bulkDelete(count, true);
+      const confirm = await message.channel.send(`🧹 Smazáno **${count}** zpráv!`);
+      setTimeout(() => confirm.delete().catch(() => {}), 3000); // smaže i potvrzení po 3s
+      console.log(`🧹 ${message.author.tag} smazal ${count} zpráv v #${message.channel.name}`);
+    } catch (err) {
+      console.error("❌ Chyba při mazání zpráv:", err);
+      message.reply("❌ Nastala chyba při mazání zpráv. Zkus to znovu.");
+    }
+  }
+});
+
 client.login(process.env.BOT_TOKEN);
 
 // --- 💤 Keepalive ping každých 5 minut --- //
