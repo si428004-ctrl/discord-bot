@@ -148,3 +148,14 @@ client.on('guildMemberAdd', async member => {
 });
 
 client.login(process.env.BOT_TOKEN);
+
+// --- 💤 Keepalive ping každých 5 minut --- //
+import fetch from "node-fetch";
+
+setInterval(() => {
+  const url = "https://discord-bot-i4hx.onrender.com"; // URL tvé služby na Renderu
+  fetch(url)
+    .then(() => console.log("💓 Keepalive ping odeslán"))
+    .catch((err) => console.error("⚠️ Chyba keepalive pingu:", err.message));
+}, 5 * 60 * 1000); // každých 5 minut
+
