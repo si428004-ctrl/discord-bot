@@ -344,12 +344,6 @@ const GUILD_ID = "1400568910176194600"; // ✅ tvoje ID serveru
 client.once("ready", async () => {
   console.log(`✅ Přihlášen jako ${client.user.tag}`);
 
-  // --- 🔔 Log do kanálu po restartu
-  const channel = client.channels.cache.get('1421633740689506405');
-  if (channel) {
-    channel.send('🟢  Bot je zpět online');
-  }
-
   // --- 🧹 Slash command registrace
   const commands = [
     new SlashCommandBuilder()
@@ -385,23 +379,23 @@ client.on("interactionCreate", async (interaction) => {
 
   const count = interaction.options.getInteger("pocet");
   if (count < 1 || count > 100) {
-    return await interaction.reply({
+    return interaction.reply({
       content: "⚠️ Zadej číslo 1–100!",
-      flags: 64, // 👈 ephemeral
+      flags: 64, // místo ephemeral
     });
   }
 
   try {
-    await interaction.deferReply({ flags: 64 }); // Tiché potvrzení, že bot pracuje
     const deleted = await interaction.channel.bulkDelete(count, true);
-
-    // místo reply → jen log do konzole (ticho v chatu)
     console.log(`🧹 Smazáno ${deleted.size} zpráv v kanálu ${interaction.channel.name}`);
 
-    // po 1s odpověď zase smažeme (i kdyby existovala)
+    // tichá “odpověď” – jen aby Discord nehlásil timeout
+    await interaction.reply({ content: "✅ Hotovo", flags: 64 }).catch(() => {});
+
+    // odpověď smaž po půl vteřině
     setTimeout(() => {
       interaction.deleteReply().catch(() => {});
-    }, 1000);
+    }, 500);
   } catch (err) {
     console.error("❌ Chyba při mazání zpráv:", err);
   }
