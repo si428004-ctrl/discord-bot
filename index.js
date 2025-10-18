@@ -159,23 +159,31 @@ const ROLE_SELECT_COLOR = "#29AC5F";
 const ROLE_SELECT_THUMB = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png";
 const ROLE_SELECT_IMG = "https://www.metasrc.com/legacy/images/lanes/mid_icon.png";
 
+// ========== 🟢 Reaction Roles ==========
+const ROLE_SELECT_CHANNEL_ID = "1409197870518636554";
+const ROLE_SELECT_MESSAGE_TITLE = "Jakou linku mainíš?";
+const ROLE_SELECT_MESSAGE_DESC = "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!";
+const ROLE_SELECT_COLOR = "#29AC5F";
+const ROLE_SELECT_THUMB = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png";
+const ROLE_SELECT_IMG = "https://www.metasrc.com/legacy/images/lanes/mid_icon.png";
+
+// ✅ Tvoje emoji + jejich role
 const EMOJI_ROLE_MAP = {
-  "adc": "1423292319150506066",
-  "top": "1423293095319048202",
-  "support": "1423292503112814662",
-  "jgl": "1423292924925575280",
-  "mid": "1423292659572674570"
+  "<:adc:1423344369523495023>": "1423292319150506066",
+  "<:top_:1423344343527198790>": "1423293095319048202",
+  "<:support:1423344317979951256>": "1423292503112814662",
+  "<:jgl:1423344292407279647>": "1423292924925575280",
+  "<:mid:1423344256076091402>": "1423292659572674570"
 };
 
-// Po přihlášení pošle embed + přidá reakce (pokud zpráva neexistuje)
 client.once("ready", async () => {
   const channel = await client.channels.fetch(ROLE_SELECT_CHANNEL_ID).catch(() => null);
   if (!channel) return console.warn("⚠️ Reaction role kanál nenalezen");
 
-  // Pokus o nalezení existující zprávy s embedem (aby se nespamovalo)
+  // 🧠 Hledáme existující zprávu
   const messages = await channel.messages.fetch({ limit: 10 }).catch(() => null);
   const existing = messages?.find(m => m.author.id === client.user.id && m.embeds?.[0]?.title === ROLE_SELECT_MESSAGE_TITLE);
-  if (existing) return;
+  if (existing) return console.log("ℹ️ Reaction role embed už existuje, přeskočeno.");
 
   const embed = new EmbedBuilder()
     .setTitle(ROLE_SELECT_MESSAGE_TITLE)
@@ -186,23 +194,25 @@ client.once("ready", async () => {
 
   const msg = await channel.send({ embeds: [embed] });
 
+  // 🧩 Přidáme všechny custom emoji
   for (const emoji of Object.keys(EMOJI_ROLE_MAP)) {
-    await msg.react(emoji).catch(() => {});
+    await msg.react(emoji).catch(err => console.warn("⚠️ Reakce se nepodařila:", emoji, err.message));
   }
 
-  console.log("✅ Reaction role embed odeslán");
+  console.log("✅ Reaction role embed odeslán + přidány emoji");
 });
 
-// Při reakci přidá/odebere roli
+// 🎯 Role přidávání/odebírání
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.message.channelId !== ROLE_SELECT_CHANNEL_ID) return;
 
-  const emojiName = reaction.emoji.name;
-  const roleId = EMOJI_ROLE_MAP[emojiName];
+  const emojiKey = reaction.emoji.toString();
+  const roleId = EMOJI_ROLE_MAP[emojiKey];
   if (!roleId) return;
 
-  const member = await reaction.message.guild.members.fetch(user.id);
+  const member = await reaction.message.guild.members.fetch(user.id).catch(() => null);
+  if (!member) return;
   await member.roles.add(roleId).catch(() => {});
 });
 
@@ -210,11 +220,12 @@ client.on("messageReactionRemove", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.message.channelId !== ROLE_SELECT_CHANNEL_ID) return;
 
-  const emojiName = reaction.emoji.name;
-  const roleId = EMOJI_ROLE_MAP[emojiName];
+  const emojiKey = reaction.emoji.toString();
+  const roleId = EMOJI_ROLE_MAP[emojiKey];
   if (!roleId) return;
 
-  const member = await reaction.message.guild.members.fetch(user.id);
+  const member = await reaction.message.guild.members.fetch(user.id).catch(() => null);
+  if (!member) return;
   await member.roles.remove(roleId).catch(() => {});
 });
 
@@ -279,10 +290,14 @@ async function updateMemberCount(guild) {
 client.on("guildMemberAdd", member => updateMemberCount(member.guild));
 client.on("guildMemberRemove", member => updateMemberCount(member.guild));
 
-// Po přihlášení aktualizuj hned
+// 💪 Po přihlášení natvrdo načti členy (fix 0 count)
 client.once("ready", async () => {
   const guild = client.guilds.cache.first();
-  if (guild) await updateMemberCount(guild);
+  if (guild) {
+    await guild.members.fetch(); // 🧠 natáhne všechny členy z API
+    await updateMemberCount(guild);
+    console.log("📊 ServerStats aktualizován po fetchi členů");
+  }
 });
 
 client.login(process.env.BOT_TOKEN);
