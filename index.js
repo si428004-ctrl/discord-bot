@@ -282,7 +282,8 @@ client.on("guildMemberAdd", async member => {
 
 // ========== 📊 Server Stats (Voice kanál counter) ==========
 const MEMBER_STATS_CHANNEL_ID = "1429158078980423913";
-const FALLEN_PHOENIX_ID = "1428857086304850051"; // 🔥 tvůj bot ID
+const FALLEN_PHOENIX_ID = "1428857086304850051"; // ID tvého bota
+const UNVERIFIED_ROLE_ID = "1428863230217945198"; // ID role, kterou nechceš počítat
 
 let lastUpdate = 0;
 async function updateMemberCount(guild) {
@@ -293,16 +294,18 @@ async function updateMemberCount(guild) {
   try {
     await guild.members.fetch();
 
-    // 💥 vymaž Phoenixa z cache natvrdo, ať se nezapočítává ani kdyby byl zdvojený
+    // 💥 odstraníme Phoenixa z cache (pro jistotu)
     guild.members.cache.delete(FALLEN_PHOENIX_ID);
 
-    // 🧮 spočítej jen lidi, žádné boty
-    const humans = guild.members.cache.filter(m => !m.user.bot).size;
+    // 🧮 počítáme jen lidi, kteří nejsou boti a nemají Unverified roli
+    const humans = guild.members.cache.filter(
+      m => !m.user.bot && !m.roles.cache.has(UNVERIFIED_ROLE_ID)
+    ).size;
 
     const channel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
     if (!channel) return console.warn("⚠️ Stats kanál nenalezen");
     await channel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${humans}`).catch(() => {});
-    console.log(`📊 ServerStats aktualizován → ${humans} lidí (Phoenixa odstraněno natvrdo)`);
+    console.log(`📊 ServerStats aktualizován → ${humans} lidí (bez Phoenixa a Unverified)`);
   } catch (err) {
     console.error("❌ Chyba při updateMemberCount:", err);
   }
