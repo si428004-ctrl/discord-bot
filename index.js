@@ -280,7 +280,6 @@ client.on("guildMemberAdd", async member => {
 // ========== 🧮 AUTO COUNTER SYNC (nová, jednoduchá verze) ==========
 const MEMBER_STATS_CHANNEL_ID = "1429158078980423913"; // Members kanál
 const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379"; // Unverified kanál
-const UNVERIFIED_ROLE_ID = "1428863230217945198"; // Unverified role
 const FALLEN_PHOENIX_ID = "1428857086304850051"; // ID bota
 
 let lastMemberCount = -1;
