@@ -40,6 +40,14 @@ const UNVERIFIED_ROLE_ID = '1428863230217945198';
 
 client.once('ready', () => {
   console.log(`✅ Přihlášen jako ${client.user.tag}`);
+
+  // 🔔 Pošle zprávu do log kanálu po restartu
+  const channel = client.channels.cache.get('1421633740689506405');
+  if (channel) {
+    channel.send('🟢 Bot je zpět online a ready to verify users 😎');
+  } else {
+    console.warn('⚠️ Kanál s ID 1421633740689506405 nebyl nalezen.');
+  }
 });
 
 client.on('guildMemberAdd', async member => {
