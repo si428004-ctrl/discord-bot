@@ -293,10 +293,8 @@ async function updateMemberCount(guild) {
   try {
     await guild.members.fetch();
 
-    // 💥 odstraníme Phoenixa z cache (pro jistotu)
     guild.members.cache.delete(FALLEN_PHOENIX_ID);
 
-    // 🧮 počítáme jen lidi, kteří nejsou boti a nemají Unverified roli
     const humans = guild.members.cache.filter(
       m => !m.user.bot && !m.roles.cache.has(UNVERIFIED_ROLE_ID)
     ).size;
@@ -310,12 +308,48 @@ async function updateMemberCount(guild) {
   }
 }
 
+
+// ========== 📊 Unverified Stats ==========
+const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379";
+
+let lastUnverifiedUpdate = 0;
+async function updateUnverifiedCount(guild) {
+  const now = Date.now();
+  if (now - lastUnverifiedUpdate < 3000) return; // cooldown
+  lastUnverifiedUpdate = now;
+
+  try {
+    await guild.members.fetch();
+
+    const unverifiedCount = guild.members.cache.filter(
+      m => m.roles.cache.has(UNVERIFIED_ROLE_ID)
+    ).size;
+
+    const channel = guild.channels.cache.get(UNVERIFIED_STATS_CHANNEL_ID);
+    if (!channel) return console.warn("⚠️ Unverified kanál nenalezen");
+    await channel.setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${unverifiedCount}`).catch(() => {});
+    console.log(`📊 Unverified aktualizován → ${unverifiedCount}`);
+  } catch (err) {
+    console.error("❌ Chyba při updateUnverifiedCount:", err);
+  }
+}
+
 // 📈 Realtime update při join/leave (s delayem)
 client.on("guildMemberAdd", member => {
   setTimeout(() => updateMemberCount(member.guild), 2000);
 });
 client.on("guildMemberRemove", member => {
   setTimeout(() => updateMemberCount(member.guild), 2000);
+});
+// 🧮 Update i pro Unverified counter
+client.on("guildMemberAdd", member => {
+  setTimeout(() => updateUnverifiedCount(member.guild), 2000);
+});
+client.on("guildMemberRemove", member => {
+  setTimeout(() => updateUnverifiedCount(member.guild), 2000);
+});
+client.on("guildMemberUpdate", (oldMember, newMember) => {
+  setTimeout(() => updateUnverifiedCount(newMember.guild), 2000);
 });
 
 // 📈 Realtime update při join/leave (s delayem)
@@ -332,8 +366,13 @@ client.once("ready", async () => {
   const guild = client.guilds.cache.first();
   if (guild) {
     // ⏳ 5 sekund delay, aby Discord API mělo připravenou cache
-    setTimeout(() => updateMemberCount(guild), 5000);
+    setTimeout(() => {
+      updateMemberCount(guild);
+      updateUnverifiedCount(guild);
+    }, 5000);
   }
+
+  console.log(`✅ Přihlášen jako ${client.user.tag}`);
 });
 
 client.login(process.env.BOT_TOKEN);
