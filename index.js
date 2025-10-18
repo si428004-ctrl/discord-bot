@@ -335,32 +335,68 @@ setInterval(async () => {
   }
 }, 35 * 1000);
 
-// ========== 🧹 CLEAR COMMAND ==========
-client.on("messageCreate", async (message) => {
-  // Ignoruj bota a DMs
-  if (message.author.bot || !message.guild) return;
+// ========== 🧹 SLASH COMMAND: /clear ==========
+import { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
 
-  // Povoleno jen adminům
-  if (!message.member.permissions.has("Administrator")) return;
+// 💾 ID tvého serveru (guildy)
+const GUILD_ID = "1400568910176194600"; // ✅ tvoje ID serveru
 
-  // Příkaz musí začínat na /clear
-  if (message.content.startsWith("/clear")) {
-    const args = message.content.split(" ");
-    const count = parseInt(args[1]) || 0;
+client.once("ready", async () => {
+  console.log(`✅ Přihlášen jako ${client.user.tag}`);
 
-    if (!count || count < 1 || count > 100) {
-      return message.reply("⚠️ Zadej prosím číslo 1–100, kolik zpráv chceš smazat.");
-    }
+  // --- 🔔 Log do kanálu po restartu
+  const channel = client.channels.cache.get('1421633740689506405');
+  if (channel) {
+    channel.send('🟢  Bot je zpět online');
+  }
 
-    try {
-      await message.channel.bulkDelete(count, true);
-      const confirm = await message.channel.send(`🧹 Smazáno **${count}** zpráv!`);
-      setTimeout(() => confirm.delete().catch(() => {}), 3000); // smaže i potvrzení po 3s
-      console.log(`🧹 ${message.author.tag} smazal ${count} zpráv v #${message.channel.name}`);
-    } catch (err) {
-      console.error("❌ Chyba při mazání zpráv:", err);
-      message.reply("❌ Nastala chyba při mazání zpráv. Zkus to znovu.");
-    }
+  // --- 🧹 Slash command registrace
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("clear")
+      .setDescription("🧹 Smaže poslední zprávy v tomto kanálu.")
+      .addIntegerOption(option =>
+        option.setName("pocet")
+          .setDescription("Kolik zpráv chceš smazat (1–100)")
+          .setRequired(true)
+      )
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+      .toJSON()
+  ];
+
+  const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
+
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+      { body: commands }
+    );
+    console.log("✅ Slash command /clear zaregistrován pro tvůj server!");
+  } catch (err) {
+    console.error("❌ Chyba při registraci slash commandu:", err);
+  }
+});
+
+
+// 🧠 Reakce na příkaz
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName !== "clear") return;
+
+  const count = interaction.options.getInteger("pocet");
+  if (count < 1 || count > 100) {
+    return await interaction.reply({ content: "⚠️ Zadej číslo 1–100!", ephemeral: true });
+  }
+
+  try {
+    const deleted = await interaction.channel.bulkDelete(count, true);
+    await interaction.reply({
+      content: `🧹 Smazáno **${deleted.size}** zpráv v ${interaction.channel}!`,
+      ephemeral: true
+    });
+  } catch (err) {
+    console.error("❌ Chyba při mazání zpráv:", err);
+    await interaction.reply({ content: "❌ Nastala chyba při mazání zpráv.", ephemeral: true });
   }
 });
 
