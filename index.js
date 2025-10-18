@@ -385,20 +385,25 @@ client.on("interactionCreate", async (interaction) => {
     });
   }
 
-  try {
-    const deleted = await interaction.channel.bulkDelete(count, true);
-    console.log(`🧹 Smazáno ${deleted.size} zpráv v kanálu ${interaction.channel.name}`);
+ try {
+  const deleted = await interaction.channel.bulkDelete(count, true);
+  console.log(`🧹 Smazáno ${deleted.size} zpráv v kanálu ${interaction.channel.name}`);
 
-    // tichá “odpověď” – jen aby Discord nehlásil timeout
-    await interaction.reply({ content: "✅ Hotovo", flags: 64 }).catch(() => {});
+  // tichá “odpověď” – jen aby Discord nehlásil timeout
+  await interaction.reply({ content: "✅ Hotovo", flags: 64 }).catch(() => {});
 
-    // odpověď smaž po půl vteřině
-    setTimeout(() => {
-      interaction.deleteReply().catch(() => {});
-    }, 500);
-  } catch (err) {
+  // odpověď smaž po půl vteřině
+  setTimeout(() => {
+    interaction.deleteReply().catch(() => {});
+  }, 500);
+
+} catch (err) {
+  if (err.code === 10008) {
+    console.log("⚠️ Některé zprávy už byly smazány dřív, přeskočeno.");
+  } else {
     console.error("❌ Chyba při mazání zpráv:", err);
   }
+}
 });
 
 client.login(process.env.BOT_TOKEN);
