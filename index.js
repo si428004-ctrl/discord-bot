@@ -280,10 +280,9 @@ client.on("guildMemberAdd", async member => {
   await channel.send({ embeds: [embed] });
 });
 
-
-
 // ========== 📊 Server Stats (Voice kanál counter) ==========
 const MEMBER_STATS_CHANNEL_ID = "1429158078980423913";
+const FALLEN_PHOENIX_ID = "1428857086304850051"; // 🧩 ID bota, kterého chceme ignorovat
 
 let lastUpdate = 0;
 async function updateMemberCount(guild) {
@@ -293,11 +292,16 @@ async function updateMemberCount(guild) {
 
   try {
     await guild.members.fetch();
-    const humans = guild.members.cache.filter(m => !m.user.bot).size;
+
+    // 🧮 počítáme pouze lidi (žádní boti a bez Fallen Phoenixa)
+    const humans = guild.members.cache.filter(
+      m => !m.user.bot && m.id !== FALLEN_PHOENIX_ID
+    ).size;
+
     const channel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
     if (!channel) return console.warn("⚠️ Stats kanál nenalezen");
     await channel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${humans}`).catch(() => {});
-    console.log(`📊 ServerStats aktualizován → ${humans} lidí`);
+    console.log(`📊 ServerStats aktualizován → ${humans} lidí (bez Phoenixa)`);
   } catch (err) {
     console.error("❌ Chyba při updateMemberCount:", err);
   }
