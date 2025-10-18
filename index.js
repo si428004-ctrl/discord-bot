@@ -1,3 +1,13 @@
+// --- 🟢 Mini Express server pro Render --- //
+import express from "express";
+const app = express();
+
+app.get("/", (req, res) => res.send("✅ Bot is running!"));
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`🌐 Mini server běží na portu ${process.env.PORT || 3000}`);
+});
+
+// --- 🤖 Discord bot část --- //
 import { 
   Client, 
   GatewayIntentBits, 
@@ -24,7 +34,7 @@ const JOIN_LOG_CHANNEL_ID = '1428864324474114141';
 const VERIFIED_ROLE_ID = '1428624557635407902';
 const UNVERIFIED_ROLE_ID = '1428863230217945198';
 
-client.once('clientReady', () => {
+client.once('ready', () => {
   console.log(`✅ Přihlášen jako ${client.user.tag}`);
 });
 
@@ -126,12 +136,3 @@ client.on('guildMemberAdd', async member => {
 });
 
 client.login(process.env.BOT_TOKEN);
-
-// --- Mini Express server pro Render --- //
-import express from "express";
-const app = express();
-
-app.get("/", (req, res) => res.send("✅ Bot is running!"));
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`🌐 Mini server běží na portu ${process.env.PORT || 3000}`);
-});
