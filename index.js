@@ -389,23 +389,26 @@ client.on("interactionCreate", async (interaction) => {
 
   try {
   const deleted = await interaction.channel.bulkDelete(count, true);
-  await interaction.reply({ content: `🧹 Smazáno ${deleted.size} zpráv.`, ephemeral: true });
 
-  // ⚡ Krátké zpoždění, aby Discord stihl odpověď potvrdit
+  // 💬 Pošli "deferred" odpověď, ať Discord ví, že na to reagujeme
+  await interaction.deferReply({ ephemeral: true });
+
+  // ✨ Po 0.5s smažeme odpověď, aby ji nikdo neviděl
   setTimeout(async () => {
     try {
       await interaction.deleteReply();
     } catch (e) {
       console.warn("⚠️ Nepodařilo se smazat reply:", e.message);
     }
-  }, 300); // 0.3 sekundy delay
+  }, 500);
 
 } catch (err) {
   console.error("❌ Chyba při mazání zpráv:", err);
-  if (!interaction.replied) {
+  if (!interaction.deferred && !interaction.replied) {
     await interaction.reply({ content: "❌ Nepodařilo se smazat zprávy.", ephemeral: true });
   }
 }
+
 });
 
 
