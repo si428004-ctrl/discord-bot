@@ -126,3 +126,12 @@ client.on('guildMemberAdd', async member => {
 });
 
 client.login(process.env.BOT_TOKEN);
+
+// --- Mini Express server pro Render --- //
+import express from "express";
+const app = express();
+
+app.get("/", (req, res) => res.send("✅ Bot is running!"));
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`🌐 Mini server běží na portu ${process.env.PORT || 3000}`);
+});
