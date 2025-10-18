@@ -3,9 +3,14 @@ import express from "express";
 const app = express();
 
 app.get("/", (req, res) => res.send("✅ Bot is running!"));
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`🌐 Mini server běží na portu ${process.env.PORT || 3000}`);
-});
+
+// 💡 Přidán krátký delay, aby Render stihl zachytit otevřený port
+setTimeout(() => {
+  const PORT = process.env.PORT || 10000;
+  app.listen(PORT, () => {
+    console.log(`🌐 Mini server běží na portu ${PORT}`);
+  });
+}, 2000); // 2 vteřiny zpoždění
 
 // --- 🤖 Discord bot část --- //
 import { 
