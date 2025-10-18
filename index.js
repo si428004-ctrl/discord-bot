@@ -245,7 +245,6 @@ client.on("guildMemberRemove", async member => {
   const embed = new EmbedBuilder()
     .setDescription(`${member.user} to nezvládl a opustil server.`)
     .setColor("#F8E71C")
-    .setTimestamp();
   await channel.send({ embeds: [embed] });
 });
 
@@ -255,7 +254,6 @@ client.on("guildBanAdd", async (ban) => {
   const embed = new EmbedBuilder()
     .setDescription(`${ban.user} dostal BAN!`)
     .setColor("#FF0000")
-    .setTimestamp();
   await channel.send({ embeds: [embed] });
 });
 
@@ -301,9 +299,40 @@ async function updateMemberCount(guild) {
   }
 }
 
-// 📈 Realtime update při join/leave
-client.on("guildMemberAdd", member => updateMemberCount(member.guild));
-client.on("guildMemberRemove", member => updateMemberCount(member.guild));
+let lastUpdate = 0;
+async function updateMemberCount(guild) {
+  const now = Date.now();
+  if (now - lastUpdate < 3000) return;
+  lastUpdate = now;
+
+  try {
+    await guild.members.fetch();
+    const humans = guild.members.cache.filter(m => !m.user.bot).size;
+    const channel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
+    if (!channel) return console.warn("⚠️ Stats kanál nenalezen");
+    await channel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${humans}`).catch(() => {});
+    console.log(`📊 ServerStats aktualizován → ${humans} lidí`);
+  } catch (err) {
+    console.error("❌ Chyba při updateMemberCount:", err);
+  }
+}
+
+// 📈 Realtime update při join/leave (s delayem)
+client.on("guildMemberAdd", member => {
+  setTimeout(() => updateMemberCount(member.guild), 2000);
+});
+client.on("guildMemberRemove", member => {
+  setTimeout(() => updateMemberCount(member.guild), 2000);
+});
+
+// 📈 Realtime update při join/leave (s delayem)
+client.on("guildMemberAdd", member => {
+  setTimeout(() => updateMemberCount(member.guild), 2000);
+});
+
+client.on("guildMemberRemove", member => {
+  setTimeout(() => updateMemberCount(member.guild), 2000);
+});
 
 // 🚀 Po přihlášení aktualizuj s drobným zpožděním
 client.once("ready", async () => {
