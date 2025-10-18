@@ -414,14 +414,16 @@ client.once("ready", async () => {
       await guild.members.fetch(); // stáhne čerstvé role všech členů
       guild.members.cache.delete(FALLEN_PHOENIX_ID); // vyhoď bota z cache
 
-      // 🧮 Spočítej přesné role
-      const verifiedCount = guild.members.cache.filter(
-        m => !m.user.bot && m.roles.cache.has(VERIFIED_ROLE_ID)
-      ).size;
+      // 🧮 Spočítej všechny členy kromě Unverified a bota FallenPhoenix
+const verifiedCount = guild.members.cache.filter(
+  m => !m.user.bot && m.id !== FALLEN_PHOENIX_ID && !m.roles.cache.has(UNVERIFIED_ROLE_ID)
+).size;
 
-      const unverifiedCount = guild.members.cache.filter(
-        m => !m.user.bot && m.roles.cache.has(UNVERIFIED_ROLE_ID)
-      ).size;
+// 🧮 Spočítej členy s Unverified rolí
+const unverifiedCount = guild.members.cache.filter(
+  m => !m.user.bot && m.roles.cache.has(UNVERIFIED_ROLE_ID)
+).size;
+
 
       // ✅ aktualizuj jen pokud se čísla fakt změnila
       if (verifiedCount !== lastVerifiedCount) {
