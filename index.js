@@ -349,7 +349,7 @@ client.on("messageCreate", async (message) => {
     const count = parseInt(args[1]) || 0;
 
     if (!count || count < 1 || count > 100) {
-      return message.reply(⚠️ Zadej prosím číslo 1–100, kolik zpráv chceš smazat.");
+      return message.reply("⚠️ Zadej prosím číslo 1–100, kolik zpráv chceš smazat.");
     }
 
     try {
