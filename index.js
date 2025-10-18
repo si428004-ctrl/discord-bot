@@ -170,7 +170,7 @@ const EMOJI_ROLE_MAP = {
 
 client.once("ready", async () => {
   const channel = await client.channels.fetch(ROLE_SELECT_CHANNEL_ID).catch(() => null);
-  if (!channel) return console.warn(⚠️ Reaction role kanál nenalezen");
+  if (!channel) return console.warn("⚠️ Reaction role kanál nenalezen");
 
   // 💡 Získání všech emoji z guildy (nutné pro custom emoji)
   const guild = client.guilds.cache.first();
