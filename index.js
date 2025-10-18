@@ -147,6 +147,144 @@ client.on('guildMemberAdd', async member => {
   }
 });
 
+// --- 🔥 Extra moduly: Reaction Roles, Welcome/Farewell, Server Stats --- //
+
+import { Colors } from "discord.js";
+
+// ========== 🟢 Reaction Roles ==========
+const ROLE_SELECT_CHANNEL_ID = "1409197870518636554";
+const ROLE_SELECT_MESSAGE_TITLE = "Jakou linku mainíš?";
+const ROLE_SELECT_MESSAGE_DESC = "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!";
+const ROLE_SELECT_COLOR = "#29AC5F";
+const ROLE_SELECT_THUMB = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png";
+const ROLE_SELECT_IMG = "https://www.metasrc.com/legacy/images/lanes/mid_icon.png";
+
+const EMOJI_ROLE_MAP = {
+  "adc": "1423292319150506066",
+  "top": "1423293095319048202",
+  "support": "1423292503112814662",
+  "jgl": "1423292924925575280",
+  "mid": "1423292659572674570"
+};
+
+// Po přihlášení pošle embed + přidá reakce (pokud zpráva neexistuje)
+client.once("ready", async () => {
+  const channel = await client.channels.fetch(ROLE_SELECT_CHANNEL_ID).catch(() => null);
+  if (!channel) return console.warn("⚠️ Reaction role kanál nenalezen");
+
+  // Pokus o nalezení existující zprávy s embedem (aby se nespamovalo)
+  const messages = await channel.messages.fetch({ limit: 10 }).catch(() => null);
+  const existing = messages?.find(m => m.author.id === client.user.id && m.embeds?.[0]?.title === ROLE_SELECT_MESSAGE_TITLE);
+  if (existing) return;
+
+  const embed = new EmbedBuilder()
+    .setTitle(ROLE_SELECT_MESSAGE_TITLE)
+    .setDescription(ROLE_SELECT_MESSAGE_DESC)
+    .setColor(ROLE_SELECT_COLOR)
+    .setThumbnail(ROLE_SELECT_THUMB)
+    .setImage(ROLE_SELECT_IMG);
+
+  const msg = await channel.send({ embeds: [embed] });
+
+  for (const emoji of Object.keys(EMOJI_ROLE_MAP)) {
+    await msg.react(emoji).catch(() => {});
+  }
+
+  console.log("✅ Reaction role embed odeslán");
+});
+
+// Při reakci přidá/odebere roli
+client.on("messageReactionAdd", async (reaction, user) => {
+  if (user.bot) return;
+  if (reaction.message.channelId !== ROLE_SELECT_CHANNEL_ID) return;
+
+  const emojiName = reaction.emoji.name;
+  const roleId = EMOJI_ROLE_MAP[emojiName];
+  if (!roleId) return;
+
+  const member = await reaction.message.guild.members.fetch(user.id);
+  await member.roles.add(roleId).catch(() => {});
+});
+
+client.on("messageReactionRemove", async (reaction, user) => {
+  if (user.bot) return;
+  if (reaction.message.channelId !== ROLE_SELECT_CHANNEL_ID) return;
+
+  const emojiName = reaction.emoji.name;
+  const roleId = EMOJI_ROLE_MAP[emojiName];
+  if (!roleId) return;
+
+  const member = await reaction.message.guild.members.fetch(user.id);
+  await member.roles.remove(roleId).catch(() => {});
+});
+
+
+// ========== 🔴 Leave & Ban Embedy ==========
+const LEAVE_BAN_CHANNEL_ID = "1428817792991363103";
+
+client.on("guildMemberRemove", async member => {
+  const channel = member.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
+  if (!channel) return;
+  const embed = new EmbedBuilder()
+    .setDescription(`${member.user} to nezvládl a opustil server.`)
+    .setColor("#F8E71C")
+    .setTimestamp();
+  await channel.send({ embeds: [embed] });
+});
+
+client.on("guildBanAdd", async (ban) => {
+  const channel = ban.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
+  if (!channel) return;
+  const embed = new EmbedBuilder()
+    .setDescription(`${ban.user} dostal BAN!`)
+    .setColor("#FF0000")
+    .setTimestamp();
+  await channel.send({ embeds: [embed] });
+});
+
+
+// ========== 🟠 Join Embed (Dyno styl) ==========
+const JOIN_ANNOUNCE_CHANNEL_ID = "1400569915437748254";
+
+client.on("guildMemberAdd", async member => {
+  const channel = member.guild.channels.cache.get(JOIN_ANNOUNCE_CHANNEL_ID);
+  if (!channel) return;
+
+  const embed = new EmbedBuilder()
+    .setTitle("N A Z D A R !")
+    .setDescription(`Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`)
+    .setColor("#FF0000")
+    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+    .setTimestamp();
+
+  await channel.send({ embeds: [embed] });
+});
+
+
+// ========== 📊 Server Stats (Voice kanál counter) ==========
+const MEMBER_STATS_CHANNEL_ID = "1429158078980423913";
+
+async function updateMemberCount(guild) {
+  try {
+    const channel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
+    if (!channel) return;
+    const count = guild.members.cache.filter(m => !m.user.bot).size;
+    await channel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${count}`).catch(() => {});
+  } catch (err) {
+    console.error("⚠️ Chyba při updatu počtu členů:", err.message);
+  }
+}
+
+// Aktualizuj při joinu/odchodu
+client.on("guildMemberAdd", member => updateMemberCount(member.guild));
+client.on("guildMemberRemove", member => updateMemberCount(member.guild));
+
+// Po přihlášení aktualizuj hned
+client.once("ready", async () => {
+  const guild = client.guilds.cache.first();
+  if (guild) await updateMemberCount(guild);
+});
+
 client.login(process.env.BOT_TOKEN);
 
 // --- 💤 Keepalive ping každých 5 minut --- //
