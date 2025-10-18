@@ -347,16 +347,15 @@ client.on("guildMemberRemove", member => {
 });
 
 // 🔁 Realtime při změně rolí
-client.on("guildMemberUpdate", async (oldMember, newMember) => {
+client.on("guildMemberUpdate", (oldMember, newMember) => {
+  console.log(`🔁 Role změněna u ${newMember.user.tag} → přepočítávám countery...`);
   try {
-    console.log(`🔁 Role změněna u ${newMember.user.tag}, čekám na refresh...`);
-    // 🕓 Počkej 4 s, ať se role 100 % propsají
-    setTimeout(async () => {
-      const freshMember = await newMember.guild.members.fetch(newMember.id);
-      await updateUnverifiedCount(freshMember.guild);
-      setTimeout(() => updateMemberCount(freshMember.guild), 1000);
-      console.log(`♻️ Countery aktualizovány po změně rolí (${freshMember.user.tag})`);
-    }, 4000);
+    // žádný fetch, žádný dlouhý timeout
+    setTimeout(() => {
+      updateUnverifiedCount(newMember.guild);
+      updateMemberCount(newMember.guild);
+      console.log(`♻️ Countery aktualizovány (${newMember.user.tag})`);
+    }, 1000); // 1 s buffer na propsání rolí
   } catch (err) {
     console.error("⚠️ Chyba při guildMemberUpdate:", err);
   }
