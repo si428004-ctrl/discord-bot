@@ -277,103 +277,64 @@ client.on("guildMemberAdd", async member => {
   await channel.send({ embeds: [embed] });
 });
 
-// ========== 📊 Server Stats (Voice kanál counter) ==========
-const MEMBER_STATS_CHANNEL_ID = "1429158078980423913";
-const FALLEN_PHOENIX_ID = "1428857086304850051"; // ID tvého bota
+// ========== 🧮 AUTO COUNTER SYNC (nová, jednoduchá verze) ==========
+const MEMBER_STATS_CHANNEL_ID = "1429158078980423913"; // Members kanál
+const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379"; // Unverified kanál
+const UNVERIFIED_ROLE_ID = "1428863230217945198"; // Unverified role
+const FALLEN_PHOENIX_ID = "1428857086304850051"; // ID bota
 
-let lastUpdate = 0;
-async function updateMemberCount(guild) {
-  const now = Date.now();
-  if (now - lastUpdate < 3000) return;
-  lastUpdate = now;
+let lastMemberCount = -1;
+let lastUnverifiedCount = -1;
 
+// === Members counter (každých 30 s) ===
+setInterval(async () => {
   try {
+    const guild = client.guilds.cache.first();
+    if (!guild) return;
+
     await guild.members.fetch();
 
-    guild.members.cache.delete(FALLEN_PHOENIX_ID);
-
-    const humans = guild.members.cache.filter(
-      m => !m.user.bot && !m.roles.cache.has(UNVERIFIED_ROLE_ID)
+    const memberCount = guild.members.cache.filter(
+      m => !m.user.bot && m.id !== FALLEN_PHOENIX_ID && !m.roles.cache.has(UNVERIFIED_ROLE_ID)
     ).size;
 
-    const channel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
-    if (!channel) return console.warn("⚠️ Stats kanál nenalezen");
-    await channel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${humans}`).catch(() => {});
-    console.log(`📊 ServerStats aktualizován → ${humans} lidí (bez Phoenixa a Unverified)`);
+    if (memberCount !== lastMemberCount) {
+      const memberChannel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
+      if (memberChannel) {
+        await memberChannel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${memberCount}`).catch(() => {});
+        console.log(`📊 Zjištěna změna – aktualizace Members → ${memberCount}`);
+      }
+      lastMemberCount = memberCount;
+    }
   } catch (err) {
-    console.error("❌ Chyba při updateMemberCount:", err);
+    console.error("⚠️ Chyba při update Members:", err.message);
   }
-}
+}, 30 * 1000);
 
-
-// ========== 📊 Unverified Stats ==========
-const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379";
-
-let lastUnverifiedUpdate = 0;
-async function updateUnverifiedCount(guild) {
-  const now = Date.now();
-  if (now - lastUnverifiedUpdate < 3000) return; // cooldown
-  lastUnverifiedUpdate = now;
-
+// === Unverified counter (každých 35 s) ===
+setInterval(async () => {
   try {
+    const guild = client.guilds.cache.first();
+    if (!guild) return;
+
     await guild.members.fetch();
 
     const unverifiedCount = guild.members.cache.filter(
-      m => m.roles.cache.has(UNVERIFIED_ROLE_ID)
+      m => !m.user.bot && m.roles.cache.has(UNVERIFIED_ROLE_ID)
     ).size;
 
-    const channel = guild.channels.cache.get(UNVERIFIED_STATS_CHANNEL_ID);
-    if (!channel) return console.warn("⚠️ Unverified kanál nenalezen");
-    await channel.setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${unverifiedCount}`).catch(() => {});
-    console.log(`📊 Unverified aktualizován → ${unverifiedCount}`);
+    if (unverifiedCount !== lastUnverifiedCount) {
+      const unverifiedChannel = guild.channels.cache.get(UNVERIFIED_STATS_CHANNEL_ID);
+      if (unverifiedChannel) {
+        await unverifiedChannel.setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${unverifiedCount}`).catch(() => {});
+        console.log(`📊 Zjištěna změna – aktualizace Unverified → ${unverifiedCount}`);
+      }
+      lastUnverifiedCount = unverifiedCount;
+    }
   } catch (err) {
-    console.error("❌ Chyba při updateUnverifiedCount:", err);
+    console.error("⚠️ Chyba při update Unverified:", err.message);
   }
-}
-
-// 📈 Realtime update při join/leave (s delayem)
-client.on("guildMemberAdd", member => {
-  setTimeout(() => {
-    updateMemberCount(member.guild);
-    updateUnverifiedCount(member.guild);
-  }, 2000);
-});
-
-client.on("guildMemberRemove", member => {
-  setTimeout(() => {
-    updateMemberCount(member.guild);
-    updateUnverifiedCount(member.guild);
-  }, 2000);
-});
-
-// 🔁 Realtime při změně rolí
-client.on("guildMemberUpdate", (oldMember, newMember) => {
-  console.log(`🔁 Role změněna u ${newMember.user.tag} → přepočítávám countery...`);
-  try {
-    // žádný fetch, žádný dlouhý timeout
-    setTimeout(() => {
-      updateUnverifiedCount(newMember.guild);
-      updateMemberCount(newMember.guild);
-      console.log(`♻️ Countery aktualizovány (${newMember.user.tag})`);
-    }, 1000); // 1 s buffer na propsání rolí
-  } catch (err) {
-    console.error("⚠️ Chyba při guildMemberUpdate:", err);
-  }
-});
-
-// 🚀 Po přihlášení aktualizuj s drobným zpožděním
-client.once("ready", async () => {
-  const guild = client.guilds.cache.first();
-  if (guild) {
-    // ⏳ 5 sekund delay, aby Discord API mělo připravenou cache
-    setTimeout(() => {
-      updateMemberCount(guild);
-      updateUnverifiedCount(guild);
-    }, 5000);
-  }
-
-  console.log(`✅ Přihlášen jako ${client.user.tag}`);
-});
+}, 35 * 1000);
 
 client.login(process.env.BOT_TOKEN);
 
@@ -388,51 +349,3 @@ setInterval(() => {
 }, 5 * 60 * 1000); // každých 5 minut
 
 
-// 🚀 Spusť auto-sync až po přihlášení
-client.once("ready", async () => {
-  console.log("♻️ Auto-sync loop inicializován (běží každé 3 s)");
-
-  let lastVerifiedCount = -1;
-  let lastUnverifiedCount = -1;
-
-  setInterval(async () => {
-    console.log("🔄 Kontroluji stavy rolí…");
-    try {
-      const guild = client.guilds.cache.first();
-      if (!guild) return console.warn("⚠️ Žádná guilda nenalezena");
-
-      await guild.members.fetch(); // stáhne čerstvé role všech členů
-      guild.members.cache.delete(FALLEN_PHOENIX_ID); // vyhoď bota z cache
-
-      // 🧮 Spočítej všechny členy kromě Unverified a bota FallenPhoenix
-const verifiedCount = guild.members.cache.filter(
-  m => !m.user.bot && m.id !== FALLEN_PHOENIX_ID && !m.roles.cache.has(UNVERIFIED_ROLE_ID)
-).size;
-
-// 🧮 Spočítej členy s Unverified rolí
-const unverifiedCount = guild.members.cache.filter(
-  m => !m.user.bot && m.roles.cache.has(UNVERIFIED_ROLE_ID)
-).size;
-
-
-      // ✅ aktualizuj jen pokud se čísla fakt změnila
-      if (verifiedCount !== lastVerifiedCount) {
-        const memberChannel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
-        if (memberChannel)
-          await memberChannel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${verifiedCount}`).catch(() => {});
-        lastVerifiedCount = verifiedCount;
-        console.log(`♻️ Members sync → ${verifiedCount}`);
-      }
-
-      if (unverifiedCount !== lastUnverifiedCount) {
-        const unverifiedChannel = guild.channels.cache.get(UNVERIFIED_STATS_CHANNEL_ID || "1429189687288926379");
-        if (unverifiedChannel)
-          await unverifiedChannel.setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${unverifiedCount}`).catch(() => {});
-        lastUnverifiedCount = unverifiedCount;
-        console.log(`♻️ Unverified sync → ${unverifiedCount}`);
-      }
-    } catch (err) {
-      console.error("❌ Chyba při auto-syncu:", err);
-    }
-  }, 3000);
-});
