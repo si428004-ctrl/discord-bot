@@ -283,7 +283,6 @@ client.on("guildMemberAdd", async member => {
 // ========== 📊 Server Stats (Voice kanál counter) ==========
 const MEMBER_STATS_CHANNEL_ID = "1429158078980423913";
 const FALLEN_PHOENIX_ID = "1428857086304850051"; // ID tvého bota
-const UNVERIFIED_ROLE_ID = "1428863230217945198"; // ID role, kterou nechceš počítat
 
 let lastUpdate = 0;
 async function updateMemberCount(guild) {
