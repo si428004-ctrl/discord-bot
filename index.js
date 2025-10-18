@@ -345,12 +345,17 @@ client.on("guildMemberAdd", member => {
 client.on("guildMemberRemove", member => {
   setTimeout(() => updateUnverifiedCount(member.guild), 2000);
 });
-client.on("guildMemberUpdate", (oldMember, newMember) => {
-  // 🧠 Po změně rolí zkontroluj oba countery
-  setTimeout(() => {
-    updateUnverifiedCount(newMember.guild);
-    updateMemberCount(newMember.guild);
-  }, 2000);
+client.on("guildMemberUpdate", async (oldMember, newMember) => {
+  try {
+    // ⏳ Malý delay, aby se stihly propsat role na Discordu
+    setTimeout(async () => {
+      const freshMember = await newMember.guild.members.fetch(newMember.id);
+      await updateUnverifiedCount(freshMember.guild);
+      await updateMemberCount(freshMember.guild);
+    }, 3500);
+  } catch (err) {
+    console.error("⚠️ Chyba při guildMemberUpdate:", err);
+  }
 });
 
 // 📈 Realtime update při join/leave (s delayem)
