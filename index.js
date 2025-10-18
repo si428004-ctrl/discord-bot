@@ -264,18 +264,24 @@ client.on("guildBanAdd", async (ban) => {
 const JOIN_ANNOUNCE_CHANNEL_ID = "1400569915437748254";
 
 client.on("guildMemberAdd", async member => {
+  // 🔒 Ignoruj bota (ať sám sobě neposílá welcome)
+  if (member.user.bot) return;
+
   const channel = member.guild.channels.cache.get(JOIN_ANNOUNCE_CHANNEL_ID);
   if (!channel) return;
 
   const embed = new EmbedBuilder()
     .setTitle("N A Z D A R !")
-    .setDescription(`Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`)
+    .setDescription(
+      `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`
+    )
     .setColor("#FF0000")
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-    .setTimestamp();
+    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
+    // ❌ odstraněno .setTimestamp()
 
   await channel.send({ embeds: [embed] });
 });
+
 
 
 // ========== 📊 Server Stats (Voice kanál counter) ==========
