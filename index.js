@@ -193,11 +193,11 @@ client.once("ready", async () => {
 
   const msg = await channel.send({ embeds: [embed] });
 
-// 💡  Získání všech emoji z guildy (nutné pro custom emoji)
-const guild = client.guilds.cache.first();
-if (guild) {
-  await guild.emojis.fetch().catch(() => {});
-  console.log(`🎨 Načteno ${guild.emojis.cache.size} emoji`);
+// 💡 Získání všech emoji z guildy (nutné pro custom emoji)
+const guildEmoji = client.guilds.cache.first();
+if (guildEmoji) {
+  await guildEmoji.emojis.fetch().catch(() => {});
+  console.log(`🎨 Načteno ${guildEmoji.emojis.cache.size} emoji`);
 }
 
   // 🧩 Přidáme všechny custom emoji
