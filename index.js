@@ -1,17 +1,3 @@
-// --- 🟢 Mini Express server pro Render --- //
-import express from "express";
-import dotenv from "dotenv";
-dotenv.config();
-
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-app.get("/", (req, res) => res.send("✅ Bot is running!"));
-
-app.listen(PORT, () => {
-  console.log(`🌐 Mini server běží na portu ${PORT}`);
-});
-
 
 // --- 🤖 Discord bot část --- //
 import { 
