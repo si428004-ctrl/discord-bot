@@ -50,6 +50,15 @@ const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379";
 const GUILD_ID = "1400568910176194600";
 const FALLEN_PHOENIX_ID = "1428857086304850051";
 
+// --- 🎭 Reaction Role mapa ---
+const EMOJI_ROLE_MAP = {
+  "<:adc:1423344369523495023>": "1423292319150506066",
+  "<:top_:1423344343527198790>": "1423293095319048202",
+  "<:support:1423344317979951256>": "1423292503112814662",
+  "<:jgl:1423344292407279647>": "1423292924925575280",
+  "<:mid:1423344256076091402>": "1423292659572674570"
+};
+
 // --- 🧠 Anti-dupe ochrana ---
 const processedJoins = new Set();
 
@@ -110,41 +119,20 @@ client.on("guildMemberAdd", async member => {
   }
 });
 
-// === 🧩 Jeden sjednocený posluchač reakcí ===
+// === 🧩 Sjednocený listener na reakce ===
 client.on("messageReactionAdd", async (reaction, user) => {
   try {
     if (user.bot) return;
     if (reaction.partial) await reaction.fetch().catch(() => {});
-
     const message = reaction.message;
     if (!message.guild) return;
 
-    // 1️⃣ Reaction Roles
-    if (message.channelId === ROLE_SELECT_CHANNEL_ID) {
-      const EMOJI_ROLE_MAP = {
-        "<:adc:1423344369523495023>": "1423292319150506066",
-        "<:top_:1423344343527198790>": "1423293095319048202",
-        "<:support:1423344317979951256>": "1423292503112814662",
-        "<:jgl:1423344292407279647>": "1423292924925575280",
-        "<:mid:1423344256076091402>": "1423292659572674570"
-      };
-      const emojiKey = reaction.emoji.toString();
-      const roleId = EMOJI_ROLE_MAP[emojiKey];
-      if (roleId) {
-        const member = await message.guild.members.fetch(user.id).catch(() => null);
-        if (member) await member.roles.add(roleId).catch(() => {});
-      }
-      return;
-    }
-
-    // 2️⃣ Schvalování uživatelů
+    // ✅ Schvalování nových členů
     if (message.channelId === JOIN_LOG_CHANNEL_ID) {
       const embed = message.embeds?.[0];
       if (!embed?.title?.includes("Nový člen")) return;
-
       const match = embed.description?.match(/<@(\d+)>/);
       if (!match) return;
-
       const memberId = match[1];
       const guild = message.guild;
       const member = await guild.members.fetch(memberId).catch(() => null);
@@ -155,18 +143,54 @@ client.on("messageReactionAdd", async (reaction, user) => {
         await member.roles.remove(UNVERIFIED_ROLE_ID).catch(() => {});
         await message.delete().catch(() => {});
         await message.channel.send({
-          embeds: [new EmbedBuilder().setDescription(`<@${member.id}> byl schválen <@${user.id}> ✅`).setColor("#00FF00")]
+          embeds: [
+            new EmbedBuilder()
+              .setDescription(`<@${member.id}> byl schválen uživatelem <@${user.id}> ✅`)
+              .setColor("#1df300")
+          ]
         });
-      } else if (reaction.emoji.name === "❌") {
+      }
+
+      if (reaction.emoji.name === "❌") {
         await member.kick(`Zamítnuto ${user.tag}`).catch(() => {});
         await message.delete().catch(() => {});
         await message.channel.send({
-          embeds: [new EmbedBuilder().setDescription(`<@${member.id}> byl odmítnut <@${user.id}> ❌`).setColor("#FF0000")]
+          embeds: [
+            new EmbedBuilder()
+              .setDescription(`<@${member.id}> byl odmítnut uživatelem <@${user.id}> ❌`)
+              .setColor("#ff0000")
+          ]
         });
       }
+
+      return;
+    }
+
+    // 🌀 Reaction Role přidávání
+    if (message.channelId === ROLE_SELECT_CHANNEL_ID) {
+      const emojiKey = reaction.emoji.toString();
+      const roleId = EMOJI_ROLE_MAP[emojiKey];
+      if (!roleId) return;
+      const member = await message.guild.members.fetch(user.id).catch(() => null);
+      if (member) await member.roles.add(roleId).catch(() => {});
     }
   } catch (err) {
     console.error("⚠️ Chyba při messageReactionAdd:", err);
+  }
+});
+
+// 🌀 Reaction Role odebírání
+client.on("messageReactionRemove", async (reaction, user) => {
+  try {
+    if (user.bot) return;
+    if (reaction.message.channelId !== ROLE_SELECT_CHANNEL_ID) return;
+    const emojiKey = reaction.emoji.toString();
+    const roleId = EMOJI_ROLE_MAP[emojiKey];
+    if (!roleId) return;
+    const member = await reaction.message.guild.members.fetch(user.id).catch(() => null);
+    if (member) await member.roles.remove(roleId).catch(() => {});
+  } catch (err) {
+    console.error("⚠️ Chyba při messageReactionRemove:", err);
   }
 });
 
