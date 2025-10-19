@@ -39,25 +39,24 @@ const client = new Client({
 });
 
 // --- 📌 IDčka ---
-const WELCOME_CHANNEL_ID = '1428862251162403019';         // kanál na ověřovací otázku
-const JOIN_LOG_CHANNEL_ID = '1428864324474114141';         // log s embedem + reakcemi ✅/❌
+const WELCOME_CHANNEL_ID = '1428862251162403019';
+const JOIN_LOG_CHANNEL_ID = '1428864324474114141';
 const VERIFIED_ROLE_ID   = '1428624557635407902';
 const UNVERIFIED_ROLE_ID = '1428863230217945198';
-const ROLE_SELECT_CHANNEL_ID = "1409197870518636554";      // reaction roles
-const LEAVE_BAN_CHANNEL_ID   = "1428817792991363103";      // leave/ban oznámení
+const ROLE_SELECT_CHANNEL_ID = "1409197870518636554";
+const LEAVE_BAN_CHANNEL_ID   = "1428817792991363103";
 const MEMBER_STATS_CHANNEL_ID    = "1429158078980423913";
 const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379";
 const GUILD_ID = "1400568910176194600";
 const FALLEN_PHOENIX_ID = "1428857086304850051";
-const NAZDAR_CHANNEL_ID = "1400569915437748254";          // NAZDAR embed kanál
-const ONLINE_LOG_CHANNEL_ID = "1421633740689506405";       // "Bot je zpět online"
+const NAZDAR_CHANNEL_ID = "1400569915437748254";
+const ONLINE_LOG_CHANNEL_ID = "1421633740689506405";
 
 // --- 🧠 Anti-dupe zámky ---
-const processedJoins = new Set();         // proti dvojímu guildMemberAdd
-const processedReactions = new Set();     // proti dvojímu zpracování stejné reakce
-const lastEvent = new Map();              // proti dvojímu leave/ban
+const processedJoins = new Set();
+const processedReactions = new Set();
+const lastEvent = new Map();
 
-// Pomocná funkce pro krátký TTL zámek (ms)
 function withShortLock(set, key, ttlMs) {
   if (set.has(key)) return true;
   set.add(key);
@@ -69,22 +68,28 @@ function withShortLock(set, key, ttlMs) {
 client.once("ready", async () => {
   console.log(`✅ Přihlášen jako ${client.user.tag}`);
 
-  // Online ping – JEDNOU
   const logCh = client.channels.cache.get(ONLINE_LOG_CHANNEL_ID);
   if (logCh) logCh.send('🟢 Bot je zpět online');
 
-  // Registrace /clear (jen jednou)
+  // Registrace /clear a /ban
   const commands = [
     new SlashCommandBuilder()
       .setName("clear")
       .setDescription("🧹 Smaže poslední zprávy v tomto kanálu.")
       .addIntegerOption(o => o.setName("pocet").setDescription("1–100").setRequired(true))
-      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-      .toJSON()
-  ];
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+    new SlashCommandBuilder()
+      .setName("ban")
+      .setDescription("🔨 Zabanovat uživatele podle ID (i když není na serveru)")
+      .addStringOption(o => o.setName("userid").setDescription("ID uživatele k banu").setRequired(true))
+      .addStringOption(o => o.setName("duvod").setDescription("Důvod banu (volitelné)").setRequired(false))
+      .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+  ].map(cmd => cmd.toJSON());
+
   const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
   await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), { body: commands });
-  console.log("✅ Slash command /clear zaregistrován.");
+  console.log("✅ Slash commands /clear a /ban zaregistrovány.");
 
   // Reaction Roles – vytvoření embedu pokud neexistuje
   try {
@@ -125,44 +130,33 @@ client.once("ready", async () => {
   }
 });
 
-// === 🟢 Nový člen (JEN JEDEN listener, teď s extra kontrolou) ===
+// === 🟢 Nový člen ===
 client.on("guildMemberAdd", async member => {
   try {
     if (member.user.bot) return;
-
-    // 👇 Pokud už má Unverified roli, znamená to, že tohle je duplicitní event → ignoruj
     if (member.roles.cache.has(UNVERIFIED_ROLE_ID)) {
       console.log(`⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`);
       return;
     }
-
-    // Anti-dupe v rámci procesu (TTL 2 minuty)
     if (withShortLock(processedJoins, member.id, 2 * 60 * 1000)) return;
 
     await member.roles.add(UNVERIFIED_ROLE_ID).catch(() => {});
     console.log(`👤 ${member.user.tag} dostal roli Unverified`);
 
-    // === EMBED zpráva N A Z D A R ===
     const welcomeEmbedChannel = member.guild.channels.cache.get(NAZDAR_CHANNEL_ID);
     if (welcomeEmbedChannel) {
       const welcomeEmbed = new EmbedBuilder()
         .setTitle("N A Z D A R !")
-        .setDescription(
-          `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`
-        )
+        .setDescription(`Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`)
         .setColor("#FF0000")
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
       await welcomeEmbedChannel.send({ embeds: [welcomeEmbed] });
     }
 
-    // === OTÁZKA do ověřovacího kanálu ===
     const verifyChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (!verifyChannel) return;
 
-    const questionMsg = await verifyChannel.send(
-      `Ahoj ${member}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?`
-    );
-
+    const questionMsg = await verifyChannel.send(`Ahoj ${member}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?`);
     const filter = m => m.author.id === member.id;
     const collector = verifyChannel.createMessageCollector({ filter, max: 1, time: 86400000 });
 
@@ -178,7 +172,6 @@ client.on("guildMemberAdd", async member => {
       const logMsg = await logChannel.send({ embeds: [embed] });
       await logMsg.react("✅");
       await logMsg.react("❌");
-
       await msg.delete().catch(() => {});
       await questionMsg.delete().catch(() => {});
     });
@@ -194,7 +187,7 @@ client.on("guildMemberAdd", async member => {
   }
 });
 
-// === 🧩 Jeden sjednocený posluchač reakcí ===
+// === 🧩 Reaction Add ===
 const EMOJI_ROLE_MAP = {
   "<:adc:1423344369523495023>": "1423292319150506066",
   "<:top_:1423344343527198790>": "1423293095319048202",
@@ -206,19 +199,12 @@ const EMOJI_ROLE_MAP = {
 client.on("messageReactionAdd", async (reaction, user) => {
   try {
     if (user.bot) return;
-
-    // po restartu fetchnout partial
-    if (reaction.partial) {
-      try { await reaction.fetch(); } catch { return; }
-    }
+    if (reaction.partial) { try { await reaction.fetch(); } catch { return; } }
     const message = reaction.message;
     if (!message.guild) return;
-
-    // Anti-dupe reakce: stejné message+emoji+user v krátkém čase
     const rk = `add:${message.id}:${reaction.emoji.identifier}:${user.id}`;
     if (withShortLock(processedReactions, rk, 2000)) return;
 
-    // 1) Reaction roles
     if (message.channelId === ROLE_SELECT_CHANNEL_ID) {
       const emojiKey = reaction.emoji.toString();
       const roleId = EMOJI_ROLE_MAP[emojiKey];
@@ -228,14 +214,11 @@ client.on("messageReactionAdd", async (reaction, user) => {
       return;
     }
 
-    // 2) Schvalování nových členů
     if (message.channelId === JOIN_LOG_CHANNEL_ID) {
       const embed = message.embeds?.[0];
       if (!embed?.title?.includes("Nový člen")) return;
-
       const match = embed.description?.match(/<@(\d+)>/);
       if (!match) return;
-
       const memberId = match[1];
       const guild = message.guild;
       const member = await guild.members.fetch(memberId).catch(() => null);
@@ -245,19 +228,11 @@ client.on("messageReactionAdd", async (reaction, user) => {
         await member.roles.add(VERIFIED_ROLE_ID).catch(() => {});
         await member.roles.remove(UNVERIFIED_ROLE_ID).catch(() => {});
         await message.delete().catch(() => {});
-        await message.channel.send({
-          embeds: [new EmbedBuilder()
-            .setDescription(`<@${member.id}> byl schválen uživatelem <@${user.id}> ✅`)
-            .setColor("#00FF00")]
-        });
+        await message.channel.send({ embeds: [new EmbedBuilder().setDescription(`<@${member.id}> byl schválen uživatelem <@${user.id}> ✅`).setColor("#00FF00")] });
       } else if (reaction.emoji.name === "❌") {
         await member.kick(`Zamítnuto ${user.tag}`).catch(() => {});
         await message.delete().catch(() => {});
-        await message.channel.send({
-          embeds: [new EmbedBuilder()
-            .setDescription(`<@${member.id}> byl odmítnut uživatelem <@${user.id}> ❌`)
-            .setColor("#FF0000")]
-        });
+        await message.channel.send({ embeds: [new EmbedBuilder().setDescription(`<@${member.id}> byl odmítnut uživatelem <@${user.id}> ❌`).setColor("#FF0000")] });
       }
     }
   } catch (err) {
@@ -265,21 +240,17 @@ client.on("messageReactionAdd", async (reaction, user) => {
   }
 });
 
-// Reaction roles – odebrání role při odebrání reakce
+// === 🧩 Reaction Remove ===
 client.on("messageReactionRemove", async (reaction, user) => {
   try {
     if (user.bot) return;
-    if (reaction.partial) {
-      try { await reaction.fetch(); } catch { return; }
-    }
+    if (reaction.partial) { try { await reaction.fetch(); } catch { return; } }
     const message = reaction.message;
     if (!message.guild) return;
     if (message.channelId !== ROLE_SELECT_CHANNEL_ID) return;
-
     const emojiKey = reaction.emoji.toString();
     const roleId = EMOJI_ROLE_MAP[emojiKey];
     if (!roleId) return;
-
     const member = await message.guild.members.fetch(user.id).catch(() => null);
     if (member) await member.roles.remove(roleId).catch(() => {});
   } catch (err) {
@@ -287,12 +258,11 @@ client.on("messageReactionRemove", async (reaction, user) => {
   }
 });
 
-// === 🔴 Leave & Ban (anti-dupe) ===
+// === 🔴 Leave & Ban ===
 client.on("guildMemberRemove", async member => {
   const now = Date.now(), last = lastEvent.get(member.id) || 0;
   if (now - last < 3000) return;
   lastEvent.set(member.id, now);
-
   const ch = member.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
   if (ch) ch.send({ embeds: [new EmbedBuilder().setDescription(`${member.user} opustil server.`).setColor("#FFD700")] });
 });
@@ -301,7 +271,6 @@ client.on("guildBanAdd", async ban => {
   const now = Date.now(), last = lastEvent.get(ban.user.id) || 0;
   if (now - last < 3000) return;
   lastEvent.set(ban.user.id, now);
-
   const ch = ban.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
   if (ch) ch.send({ embeds: [new EmbedBuilder().setDescription(`${ban.user} dostal BAN!`).setColor("#FF0000")] });
 });
@@ -314,11 +283,7 @@ setInterval(async () => {
     const guild = client.guilds.cache.first();
     if (!guild) return;
     await guild.members.fetch();
-
-    const memberCount = guild.members.cache
-      .filter(m => !m.user.bot && m.id !== FALLEN_PHOENIX_ID && !m.roles.cache.has(UNVERIFIED_ROLE_ID))
-      .size;
-
+    const memberCount = guild.members.cache.filter(m => !m.user.bot && m.id !== FALLEN_PHOENIX_ID && !m.roles.cache.has(UNVERIFIED_ROLE_ID)).size;
     if (memberCount !== lastMemberCount) {
       const ch = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
       if (ch) await ch.setName(`🔢︱Mᴇᴍʙᴇʀs: ${memberCount}`).catch(() => {});
@@ -334,9 +299,7 @@ setInterval(async () => {
     const guild = client.guilds.cache.first();
     if (!guild) return;
     await guild.members.fetch();
-
     const count = guild.members.cache.filter(m => !m.user.bot && m.roles.cache.has(UNVERIFIED_ROLE_ID)).size;
-
     if (count !== lastUnverifiedCount) {
       const ch = guild.channels.cache.get(UNVERIFIED_STATS_CHANNEL_ID);
       if (ch) await ch.setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${count}`).catch(() => {});
@@ -347,22 +310,47 @@ setInterval(async () => {
   }
 }, 35000);
 
-// === 🧹 /clear ===
+// === 🧹 /clear + /ban ===
 client.on("interactionCreate", async i => {
-  if (!i.isChatInputCommand() || i.commandName !== "clear") return;
-  const count = i.options.getInteger("pocet");
-  if (count < 1 || count > 100) {
-    return i.reply({ content: "⚠️ Zadej číslo 1–100!", flags: 64 });
+  if (!i.isChatInputCommand()) return;
+
+  // 🧹 /clear
+  if (i.commandName === "clear") {
+    const count = i.options.getInteger("pocet");
+    if (count < 1 || count > 100) return i.reply({ content: "⚠️ Zadej číslo 1–100!", flags: 64 });
+    try {
+      const deleted = await i.channel.bulkDelete(count, true);
+      await i.reply({ content: `✅ Smazáno ${deleted.size} zpráv`, flags: 64 });
+      setTimeout(() => i.deleteReply().catch(() => {}), 1000);
+    } catch (err) {
+      if (err.code === 10008) console.log("⚠️ Některé zprávy už byly smazány dřív, přeskočeno.");
+      else console.error("❌ Chyba při mazání zpráv:", err);
+    }
   }
-  try {
-    const deleted = await i.channel.bulkDelete(count, true);
-    await i.reply({ content: `✅ Smazáno ${deleted.size} zpráv`, flags: 64 });
-    setTimeout(() => i.deleteReply().catch(() => {}), 1000);
-  } catch (err) {
-    if (err.code === 10008) {
-      console.log("⚠️ Některé zprávy už byly smazány dřív, přeskočeno.");
-    } else {
-      console.error("❌ Chyba při mazání zpráv:", err);
+
+  // 🔨 /ban
+  if (i.commandName === "ban") {
+    const userId = i.options.getString("userid");
+    const reason = i.options.getString("duvod") || "Bez důvodu";
+    try {
+      const guild = i.guild;
+      await guild.bans.create(userId, { reason });
+      await i.reply({ content: `✅ Uživatel <@${userId}> byl zabanován.`, flags: 64 });
+      setTimeout(() => i.deleteReply().catch(() => {}), 1000);
+
+      const logCh = guild.channels.cache.get(ONLINE_LOG_CHANNEL_ID);
+      if (logCh) {
+        const embed = new EmbedBuilder()
+          .setTitle("🚫 BAN")
+          .setDescription(`**Uživatel:** <@${userId}> (${userId})\n**Banned by:** <@${i.user.id}>\n**Důvod:** ${reason}`)
+          .setColor("#FF0000")
+          .setTimestamp();
+        await logCh.send({ embeds: [embed] });
+      }
+    } catch (err) {
+      console.error("❌ Chyba při /ban:", err);
+      await i.reply({ content: `⚠️ Nepodařilo se zabanovat uživatele s ID ${userId}`, flags: 64 });
+      setTimeout(() => i.deleteReply().catch(() => {}), 2000);
     }
   }
 });
