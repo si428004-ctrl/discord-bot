@@ -118,45 +118,72 @@ client.on('guildMemberAdd', async member => {
 client.on("messageReactionAdd", async (reaction, user) => {
   try {
     if (user.bot) return;
-    if (!reaction.message.guild) return;
+
+    // 🧠 Debug log
+    console.log(`📩 Reakce zachycena: ${reaction.emoji.name} od ${user.tag}`);
+
+    // pokud message není načtená (po restartu), fetchneme ji
+    if (reaction.partial) {
+      try {
+        await reaction.fetch();
+        console.log("✅ Reakce úspěšně fetchnutá po restartu.");
+      } catch (e) {
+        console.warn("⚠️ Nepodařilo se fetchnout reakci:", e);
+        return;
+      }
+    }
+
+    const message = reaction.message;
+    if (!message.guild) return;
 
     // reaguj pouze v log kanálu
-    if (reaction.message.channelId !== JOIN_LOG_CHANNEL_ID) return;
+    if (message.channelId !== JOIN_LOG_CHANNEL_ID) return;
 
-    const embed = reaction.message.embeds?.[0];
-    if (!embed?.title?.includes("Nový člen na serveru")) return;
+    const embed = message.embeds?.[0];
+    if (!embed?.title?.includes("Nový člen na serveru")) {
+      console.log("⛔ Embed nebyl rozpoznán jako schvalovací.");
+      return;
+    }
 
     // z description vytáhneme ID uživatele
     const match = embed.description?.match(/<@(\d+)>/);
-    if (!match) return;
-    const memberId = match[1];
+    if (!match) {
+      console.log("❌ Nepodařilo se vytáhnout ID člena z embedu.");
+      return;
+    }
 
-    const guild = reaction.message.guild;
+    const memberId = match[1];
+    const guild = message.guild;
     const member = await guild.members.fetch(memberId).catch(() => null);
-    if (!member) return;
+    if (!member) {
+      console.log(`❌ Člen ${memberId} nenalezen.`);
+      return;
+    }
 
     // ✅ schválení
     if (reaction.emoji.name === "✅") {
+      console.log(`✅ Schválení pro ${member.user.tag}`);
       await member.roles.add(VERIFIED_ROLE_ID).catch(() => {});
       await member.roles.remove(UNVERIFIED_ROLE_ID).catch(() => {});
-      await reaction.message.delete().catch(() => {});
+      await message.delete().catch(() => {});
 
       const approvedEmbed = new EmbedBuilder()
         .setDescription(`<@${member.id}> byl schválen uživatelem <@${user.id}> ✅`)
         .setColor("#1df300");
-      await reaction.message.channel.send({ embeds: [approvedEmbed] });
+      await message.channel.send({ embeds: [approvedEmbed] });
     }
 
     // ❌ odmítnutí
     if (reaction.emoji.name === "❌") {
+      console.log(`❌ Odmítnutí pro ${member.user.tag}`);
       await member.kick(`Zamítnuto ${user.tag}`).catch(() => {});
-      await reaction.message.delete().catch(() => {});
-
+      await message.delete().catch(() => {});
       const deniedEmbed = new EmbedBuilder()
         .setDescription(`<@${member.id}> byl odmítnut uživatelem <@${user.id}> ❌`)
         .setColor("#ff0000");
-      await reaction.message.channel.send({ embeds: [deniedEmbed] });
+      await message.channel.send({ embeds: [deniedEmbed] });
     }
+
   } catch (err) {
     console.error("⚠️ Chyba při zpracování schvalovací reakce:", err);
   }
