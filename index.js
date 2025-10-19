@@ -43,19 +43,21 @@ const JOIN_LOG_CHANNEL_ID = '1428864324474114141';
 const VERIFIED_ROLE_ID = '1428624557635407902';
 const UNVERIFIED_ROLE_ID = '1428863230217945198';
 
-// 🧠 krátký buffer, aby se guildMemberAdd nespustil 2×
-let recentJoins = new Map();
+// 🧠 Anti-dup ochrana – 100% fix pro dvojité NAZDAR a otázku
+const processedJoins = new Set();
 
 client.on("guildMemberAdd", async member => {
   try {
     if (member.user.bot) return;
 
-    const now = Date.now();
-    const lastJoin = recentJoins.get(member.id) || 0;
-
-    // pokud se event spustí do 5 s od posledního — ignoruj
-    if (now - lastJoin < 5000) return;
-    recentJoins.set(member.id, now);
+    // pokud už byl člen zpracován, ignoruj
+    if (processedJoins.has(member.id)) {
+      console.log(`⚠️ Duplicitní join detekován: ${member.user.tag}`);
+      return;
+    }
+    processedJoins.add(member.id);
+    // reset po 2 minutách (aby se to nezacyklilo)
+    setTimeout(() => processedJoins.delete(member.id), 120000);
 
     // 🟡 Přidat Unverified roli
     await member.roles.add(UNVERIFIED_ROLE_ID).catch(() => {});
@@ -83,7 +85,6 @@ client.on("guildMemberAdd", async member => {
       `Ahoj ${member}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?`
     );
 
-    // 📨 Collector na odpověď (24h timeout)
     const filter = m => m.author.id === member.id;
     const collector = verifyChannel.createMessageCollector({ filter, max: 1, time: 86400000 });
 
