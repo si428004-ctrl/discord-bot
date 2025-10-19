@@ -30,18 +30,6 @@ const JOIN_LOG_CHANNEL_ID = '1428864324474114141';
 const VERIFIED_ROLE_ID = '1428624557635407902';
 const UNVERIFIED_ROLE_ID = '1428863230217945198';
 
-client.once('ready', () => {
-  console.log(`✅ Přihlášen jako ${client.user.tag}`);
-
-  // 🔔 Pošle zprávu do log kanálu po restartu
-  const channel = client.channels.cache.get('1421633740689506405');
-  if (channel) {
-    channel.send('🟢  Bot je zpět online');
-  } else {
-    console.warn('⚠️ Kanál s ID 1421633740689506405 nebyl nalezen.');
-  }
-});
-
 client.on('guildMemberAdd', async member => {
   const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
   if (!welcomeChannel) return;
@@ -371,6 +359,12 @@ const GUILD_ID = "1400568910176194600"; // ✅ tvoje ID serveru
 
 client.once("ready", async () => {
   console.log(`✅ Přihlášen jako ${client.user.tag}`);
+
+  // 🔔 Pošle zprávu do log kanálu po restartu
+  const channel = client.channels.cache.get('1421633740689506405');
+  if (channel) {
+    channel.send('🟢  Bot je zpět online');
+  }
 
   // --- 🧹 Slash command registrace
   const commands = [
