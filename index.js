@@ -461,6 +461,7 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.BOT_TOKEN);
+console.log("🧠 Instance ID:", Math.random().toString(36).substring(2, 8));
 
 // --- 💤 Keepalive ping každých 5 minut --- //
 import fetch from "node-fetch";
