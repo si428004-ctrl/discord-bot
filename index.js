@@ -43,12 +43,22 @@ const JOIN_LOG_CHANNEL_ID = '1428864324474114141';
 const VERIFIED_ROLE_ID = '1428624557635407902';
 const UNVERIFIED_ROLE_ID = '1428863230217945198';
 
+// 🧠 krátký buffer, aby se guildMemberAdd nespustil 2×
+let recentJoins = new Map();
+
 client.on("guildMemberAdd", async member => {
   try {
     if (member.user.bot) return;
 
+    const now = Date.now();
+    const lastJoin = recentJoins.get(member.id) || 0;
+
+    // pokud se event spustí do 5 s od posledního — ignoruj
+    if (now - lastJoin < 5000) return;
+    recentJoins.set(member.id, now);
+
     // 🟡 Přidat Unverified roli
-    await member.roles.add(UNVERIFIED_ROLE_ID);
+    await member.roles.add(UNVERIFIED_ROLE_ID).catch(() => {});
     console.log(`👤 ${member.user.tag} dostal roli Unverified`);
 
     // 📢 NAZDAR embed do správného kanálu
