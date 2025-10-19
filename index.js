@@ -5,20 +5,21 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
-
 app.get("/", (req, res) => res.send("✅ Bot is running!"));
-
-app.listen(PORT, () => {
-  console.log(`🌐 Mini server běží na portu ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🌐 Mini server běží na portu ${PORT}`));
 
 // --- 🤖 Discord bot část --- //
-import { 
-  Client, 
-  GatewayIntentBits, 
-  Partials, 
-  EmbedBuilder 
-} from 'discord.js';
+import {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  EmbedBuilder,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  PermissionFlagsBits
+} from "discord.js";
+import fetch from "node-fetch";
 
 const client = new Client({
   intents: [
@@ -37,50 +38,44 @@ const client = new Client({
   ]
 });
 
-// ⬇️ Doplň svoje ID kanálů / rolí ⬇️
+// --- 📌 IDčka ---
 const WELCOME_CHANNEL_ID = '1428862251162403019';
 const JOIN_LOG_CHANNEL_ID = '1428864324474114141';
 const VERIFIED_ROLE_ID = '1428624557635407902';
 const UNVERIFIED_ROLE_ID = '1428863230217945198';
+const ROLE_SELECT_CHANNEL_ID = "1409197870518636554";
+const LEAVE_BAN_CHANNEL_ID = "1428817792991363103";
+const MEMBER_STATS_CHANNEL_ID = "1429158078980423913";
+const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379";
+const GUILD_ID = "1400568910176194600";
+const FALLEN_PHOENIX_ID = "1428857086304850051";
 
-// 🧠 Anti-dup ochrana – 100% fix pro dvojité NAZDAR a otázku
+// --- 🧠 Anti-dupe ochrana ---
 const processedJoins = new Set();
 
+// === 🟢 Nový člen ===
 client.on("guildMemberAdd", async member => {
   try {
     if (member.user.bot) return;
-
-    // pokud už byl člen zpracován, ignoruj
-    if (processedJoins.has(member.id)) {
-      console.log(`⚠️ Duplicitní join detekován: ${member.user.tag}`);
-      return;
-    }
+    if (processedJoins.has(member.id)) return;
     processedJoins.add(member.id);
-    // reset po 2 minutách (aby se to nezacyklilo)
     setTimeout(() => processedJoins.delete(member.id), 120000);
 
-    // 🟡 Přidat Unverified roli
     await member.roles.add(UNVERIFIED_ROLE_ID).catch(() => {});
     console.log(`👤 ${member.user.tag} dostal roli Unverified`);
 
-    // 📢 NAZDAR embed do správného kanálu
     const welcomeEmbedChannel = member.guild.channels.cache.get("1400569915437748254");
     if (welcomeEmbedChannel) {
       const welcomeEmbed = new EmbedBuilder()
         .setTitle("N A Z D A R !")
-        .setDescription(
-          `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`
-        )
+        .setDescription(`Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`)
         .setColor("#FF0000")
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
-
       await welcomeEmbedChannel.send({ embeds: [welcomeEmbed] });
     }
 
-    // 📩 Otázka do ověřovacího kanálu
     const verifyChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (!verifyChannel) return;
-
     const questionMsg = await verifyChannel.send(
       `Ahoj ${member}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?`
     );
@@ -107,370 +102,150 @@ client.on("guildMemberAdd", async member => {
 
     collector.on("end", async collected => {
       if (collected.size === 0) {
-        try {
-          await member.kick("Neodpověděl na uvítací otázku během 24 hodin");
-          console.log(`⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`);
-        } catch (e) {
-          console.error("Chyba při timeout kicku:", e);
-        }
+        await member.kick("Neodpověděl na uvítací otázku během 24 hodin").catch(() => {});
       }
     });
   } catch (err) {
-    console.error("Chyba v guildMemberAdd handleru:", err);
+    console.error("❌ Chyba v guildMemberAdd:", err);
   }
 });
 
-// === 🧩 Trvalý posluchač reakcí pro schvalování uživatelů ===
+// === 🧩 Jeden sjednocený posluchač reakcí ===
 client.on("messageReactionAdd", async (reaction, user) => {
   try {
     if (user.bot) return;
-
-    // 🧠 Debug log
-    console.log(`📩 Reakce zachycena: ${reaction.emoji.name} od ${user.tag}`);
-
-    // pokud message není načtená (po restartu), fetchneme ji
-    if (reaction.partial) {
-      try {
-        await reaction.fetch();
-        console.log("✅ Reakce úspěšně fetchnutá po restartu.");
-      } catch (e) {
-        console.warn("⚠️ Nepodařilo se fetchnout reakci:", e);
-        return;
-      }
-    }
+    if (reaction.partial) await reaction.fetch().catch(() => {});
 
     const message = reaction.message;
     if (!message.guild) return;
 
-    // reaguj pouze v log kanálu
-    if (message.channelId !== JOIN_LOG_CHANNEL_ID) return;
-
-    const embed = message.embeds?.[0];
-    if (!embed?.title?.includes("Nový člen na serveru")) {
-      console.log("⛔ Embed nebyl rozpoznán jako schvalovací.");
+    // 1️⃣ Reaction Roles
+    if (message.channelId === ROLE_SELECT_CHANNEL_ID) {
+      const EMOJI_ROLE_MAP = {
+        "<:adc:1423344369523495023>": "1423292319150506066",
+        "<:top_:1423344343527198790>": "1423293095319048202",
+        "<:support:1423344317979951256>": "1423292503112814662",
+        "<:jgl:1423344292407279647>": "1423292924925575280",
+        "<:mid:1423344256076091402>": "1423292659572674570"
+      };
+      const emojiKey = reaction.emoji.toString();
+      const roleId = EMOJI_ROLE_MAP[emojiKey];
+      if (roleId) {
+        const member = await message.guild.members.fetch(user.id).catch(() => null);
+        if (member) await member.roles.add(roleId).catch(() => {});
+      }
       return;
     }
 
-    // z description vytáhneme ID uživatele
-    const match = embed.description?.match(/<@(\d+)>/);
-    if (!match) {
-      console.log("❌ Nepodařilo se vytáhnout ID člena z embedu.");
-      return;
+    // 2️⃣ Schvalování uživatelů
+    if (message.channelId === JOIN_LOG_CHANNEL_ID) {
+      const embed = message.embeds?.[0];
+      if (!embed?.title?.includes("Nový člen")) return;
+
+      const match = embed.description?.match(/<@(\d+)>/);
+      if (!match) return;
+
+      const memberId = match[1];
+      const guild = message.guild;
+      const member = await guild.members.fetch(memberId).catch(() => null);
+      if (!member) return;
+
+      if (reaction.emoji.name === "✅") {
+        await member.roles.add(VERIFIED_ROLE_ID).catch(() => {});
+        await member.roles.remove(UNVERIFIED_ROLE_ID).catch(() => {});
+        await message.delete().catch(() => {});
+        await message.channel.send({
+          embeds: [new EmbedBuilder().setDescription(`<@${member.id}> byl schválen <@${user.id}> ✅`).setColor("#00FF00")]
+        });
+      } else if (reaction.emoji.name === "❌") {
+        await member.kick(`Zamítnuto ${user.tag}`).catch(() => {});
+        await message.delete().catch(() => {});
+        await message.channel.send({
+          embeds: [new EmbedBuilder().setDescription(`<@${member.id}> byl odmítnut <@${user.id}> ❌`).setColor("#FF0000")]
+        });
+      }
     }
-
-    const memberId = match[1];
-    const guild = message.guild;
-    const member = await guild.members.fetch(memberId).catch(() => null);
-    if (!member) {
-      console.log(`❌ Člen ${memberId} nenalezen.`);
-      return;
-    }
-
-    // ✅ schválení
-    if (reaction.emoji.name === "✅") {
-      console.log(`✅ Schválení pro ${member.user.tag}`);
-      await member.roles.add(VERIFIED_ROLE_ID).catch(() => {});
-      await member.roles.remove(UNVERIFIED_ROLE_ID).catch(() => {});
-      await message.delete().catch(() => {});
-
-      const approvedEmbed = new EmbedBuilder()
-        .setDescription(`<@${member.id}> byl schválen uživatelem <@${user.id}> ✅`)
-        .setColor("#1df300");
-      await message.channel.send({ embeds: [approvedEmbed] });
-    }
-
-    // ❌ odmítnutí
-    if (reaction.emoji.name === "❌") {
-      console.log(`❌ Odmítnutí pro ${member.user.tag}`);
-      await member.kick(`Zamítnuto ${user.tag}`).catch(() => {});
-      await message.delete().catch(() => {});
-      const deniedEmbed = new EmbedBuilder()
-        .setDescription(`<@${member.id}> byl odmítnut uživatelem <@${user.id}> ❌`)
-        .setColor("#ff0000");
-      await message.channel.send({ embeds: [deniedEmbed] });
-    }
-
   } catch (err) {
-    console.error("⚠️ Chyba při zpracování schvalovací reakce:", err);
+    console.error("⚠️ Chyba při messageReactionAdd:", err);
   }
 });
 
-// --- 🔥 Extra moduly: Reaction Roles, Welcome/Farewell, Server Stats --- //
-
-import { Colors } from "discord.js";
-
-// ========== 🟢 Reaction Roles ==========
-const ROLE_SELECT_CHANNEL_ID = "1409197870518636554";
-const ROLE_SELECT_MESSAGE_TITLE = "Jakou linku mainíš?";
-const ROLE_SELECT_MESSAGE_DESC = "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!";
-const ROLE_SELECT_COLOR = "#29AC5F";
-const ROLE_SELECT_THUMB = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png";
-const ROLE_SELECT_IMG = "https://www.metasrc.com/legacy/images/lanes/mid_icon.png";
-
-// ✅ Tvoje emoji + jejich role
-const EMOJI_ROLE_MAP = {
-  "<:adc:1423344369523495023>": "1423292319150506066",
-  "<:top_:1423344343527198790>": "1423293095319048202",
-  "<:support:1423344317979951256>": "1423292503112814662",
-  "<:jgl:1423344292407279647>": "1423292924925575280",
-  "<:mid:1423344256076091402>": "1423292659572674570"
-};
-
-client.once("clientReady", async () => {
-  const channel = await client.channels.fetch(ROLE_SELECT_CHANNEL_ID).catch(() => null);
-  if (!channel) return console.warn("⚠️ Reaction role kanál nenalezen");
-
-  // 💡 Získání všech emoji z guildy (nutné pro custom emoji)
-  const guild = client.guilds.cache.first();
-  if (guild) {
-    await guild.emojis.fetch().catch(() => {});
-    console.log(`🎨 Načteno ${guild.emojis.cache.size} emoji`);
-  }
-
-  // 🧠 Hledáme existující zprávu
-  const messages = await channel.messages.fetch({ limit: 10 }).catch(() => null);
-  const existing = messages?.find(m => m.author.id === client.user.id && m.embeds?.[0]?.title === ROLE_SELECT_MESSAGE_TITLE);
-  if (existing) return console.log("ℹ️ Reaction role embed už existuje, přeskočeno.");
-
-  const embed = new EmbedBuilder()
-    .setTitle(ROLE_SELECT_MESSAGE_TITLE)
-    .setDescription(ROLE_SELECT_MESSAGE_DESC)
-    .setColor(ROLE_SELECT_COLOR)
-    .setThumbnail(ROLE_SELECT_THUMB)
-    .setImage(ROLE_SELECT_IMG);
-
-  const msg = await channel.send({ embeds: [embed] });
-
-// 💡 Získání všech emoji z guildy (nutné pro custom emoji)
-const guildEmoji = client.guilds.cache.first();
-if (guildEmoji) {
-  await guildEmoji.emojis.fetch().catch(() => {});
-  console.log(`🎨 Načteno ${guildEmoji.emojis.cache.size} emoji`);
-}
-
-  // 🧩 Přidáme všechny custom emoji
-  for (const emoji of Object.keys(EMOJI_ROLE_MAP)) {
-    await msg.react(emoji).catch(err => console.warn("⚠️ Reakce se nepodařila:", emoji, err.message));
-  }
-
-  console.log("✅ Reaction role embed odeslán + přidány emoji");
-});
-
-// 🎯 Role přidávání/odebírání
-client.on("messageReactionAdd", async (reaction, user) => {
-  if (user.bot) return;
-  if (reaction.message.channelId !== ROLE_SELECT_CHANNEL_ID) return;
-
-  const emojiKey = reaction.emoji.toString();
-  const roleId = EMOJI_ROLE_MAP[emojiKey];
-  if (!roleId) return;
-
-  const member = await reaction.message.guild.members.fetch(user.id).catch(() => null);
-  if (!member) return;
-  await member.roles.add(roleId).catch(() => {});
-});
-
-client.on("messageReactionRemove", async (reaction, user) => {
-  if (user.bot) return;
-  if (reaction.message.channelId !== ROLE_SELECT_CHANNEL_ID) return;
-
-  const emojiKey = reaction.emoji.toString();
-  const roleId = EMOJI_ROLE_MAP[emojiKey];
-  if (!roleId) return;
-
-  const member = await reaction.message.guild.members.fetch(user.id).catch(() => null);
-  if (!member) return;
-  await member.roles.remove(roleId).catch(() => {});
-});
-
-// ========== 🔴 Leave & Ban Embedy ==========
-const LEAVE_BAN_CHANNEL_ID = "1428817792991363103";
-
-// 🧠 krátký buffer, aby se nespustil stejný event 2×
-let lastEvent = new Map();
-
+// === 🔴 Leave & Ban ===
+const lastEvent = new Map();
 client.on("guildMemberRemove", async member => {
-  const now = Date.now();
-  const last = lastEvent.get(member.id) || 0;
-
-  // 🔒 ochrana: pokud stejný event do 3 sekund → ignoruj duplicitní
+  const now = Date.now(), last = lastEvent.get(member.id) || 0;
   if (now - last < 3000) return;
   lastEvent.set(member.id, now);
-
-  const channel = member.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
-  if (!channel) return;
-
-  const embed = new EmbedBuilder()
-    .setDescription(`${member.user} to nezvládl a opustil server.`)
-    .setColor("#F8E71C");
-
-  await channel.send({ embeds: [embed] });
+  const ch = member.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
+  if (ch) ch.send({ embeds: [new EmbedBuilder().setDescription(`${member.user} opustil server.`).setColor("#FFD700")] });
 });
-
 client.on("guildBanAdd", async ban => {
-  const now = Date.now();
-  const last = lastEvent.get(ban.user.id) || 0;
-
-  // 🔒 ochrana: pokud byl právě zpracován leave → nehlásit znovu
+  const now = Date.now(), last = lastEvent.get(ban.user.id) || 0;
   if (now - last < 3000) return;
   lastEvent.set(ban.user.id, now);
-
-  const channel = ban.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
-  if (!channel) return;
-
-  const embed = new EmbedBuilder()
-    .setDescription(`${ban.user} dostal BAN!`)
-    .setColor("#FF0000");
-
-  await channel.send({ embeds: [embed] });
+  const ch = ban.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
+  if (ch) ch.send({ embeds: [new EmbedBuilder().setDescription(`${ban.user} dostal BAN!`).setColor("#FF0000")] });
 });
 
-// ========== 🧮 AUTO COUNTER SYNC (nová, jednoduchá verze) ==========
-const MEMBER_STATS_CHANNEL_ID = "1429158078980423913"; // Members kanál
-const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379"; // Unverified kanál
-const FALLEN_PHOENIX_ID = "1428857086304850051"; // ID bota
-
-let lastMemberCount = -1;
-let lastUnverifiedCount = -1;
-
-// === Members counter (každých 30 s) ===
+// === 🧮 Counters ===
+let lastMemberCount = -1, lastUnverifiedCount = -1;
 setInterval(async () => {
-  try {
-    const guild = client.guilds.cache.first();
-    if (!guild) return;
-
-    await guild.members.fetch();
-
-    const memberCount = guild.members.cache.filter(
-      m => !m.user.bot && m.id !== FALLEN_PHOENIX_ID && !m.roles.cache.has(UNVERIFIED_ROLE_ID)
-    ).size;
-
-    if (memberCount !== lastMemberCount) {
-      const memberChannel = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
-      if (memberChannel) {
-        await memberChannel.setName(`🔢︱Mᴇᴍʙᴇʀs: ${memberCount}`).catch(() => {});
-        console.log(`📊 Zjištěna změna – aktualizace Members → ${memberCount}`);
-      }
-      lastMemberCount = memberCount;
-    }
-  } catch (err) {
-    console.error("⚠️ Chyba při update Members:", err.message);
+  const guild = client.guilds.cache.first();
+  if (!guild) return;
+  await guild.members.fetch();
+  const memberCount = guild.members.cache.filter(m => !m.user.bot && m.id !== FALLEN_PHOENIX_ID && !m.roles.cache.has(UNVERIFIED_ROLE_ID)).size;
+  if (memberCount !== lastMemberCount) {
+    const ch = guild.channels.cache.get(MEMBER_STATS_CHANNEL_ID);
+    if (ch) await ch.setName(`🔢︱Mᴇᴍʙᴇʀs: ${memberCount}`).catch(() => {});
+    lastMemberCount = memberCount;
   }
-}, 30 * 1000);
+}, 30000);
 
-// === Unverified counter (každých 35 s) ===
 setInterval(async () => {
-  try {
-    const guild = client.guilds.cache.first();
-    if (!guild) return;
-
-    await guild.members.fetch();
-
-    const unverifiedCount = guild.members.cache.filter(
-      m => !m.user.bot && m.roles.cache.has(UNVERIFIED_ROLE_ID)
-    ).size;
-
-    if (unverifiedCount !== lastUnverifiedCount) {
-      const unverifiedChannel = guild.channels.cache.get(UNVERIFIED_STATS_CHANNEL_ID);
-      if (unverifiedChannel) {
-        await unverifiedChannel.setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${unverifiedCount}`).catch(() => {});
-        console.log(`📊 Zjištěna změna – aktualizace Unverified → ${unverifiedCount}`);
-      }
-      lastUnverifiedCount = unverifiedCount;
-    }
-  } catch (err) {
-    console.error("⚠️ Chyba při update Unverified:", err.message);
+  const guild = client.guilds.cache.first();
+  if (!guild) return;
+  await guild.members.fetch();
+  const count = guild.members.cache.filter(m => !m.user.bot && m.roles.cache.has(UNVERIFIED_ROLE_ID)).size;
+  if (count !== lastUnverifiedCount) {
+    const ch = guild.channels.cache.get(UNVERIFIED_STATS_CHANNEL_ID);
+    if (ch) await ch.setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${count}`).catch(() => {});
+    lastUnverifiedCount = count;
   }
-}, 35 * 1000);
+}, 35000);
 
-// ========== 🧹 SLASH COMMAND: /clear ==========
-import { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
-
-// 💾 ID tvého serveru (guildy)
-const GUILD_ID = "1400568910176194600"; // ✅ tvoje ID serveru
-
+// === 🧹 /clear ===
 client.once("ready", async () => {
   console.log(`✅ Přihlášen jako ${client.user.tag}`);
+  const logCh = client.channels.cache.get('1421633740689506405');
+  if (logCh) logCh.send('🟢 Bot je zpět online');
 
-  // 🔔 Pošle zprávu do log kanálu po restartu
-  const channel = client.channels.cache.get('1421633740689506405');
-  if (channel) {
-    channel.send('🟢  Bot je zpět online');
-  }
-
-  // --- 🧹 Slash command registrace
   const commands = [
     new SlashCommandBuilder()
       .setName("clear")
       .setDescription("🧹 Smaže poslední zprávy v tomto kanálu.")
-      .addIntegerOption(option =>
-        option.setName("pocet")
-          .setDescription("Kolik zpráv chceš smazat (1–100)")
-          .setRequired(true)
-      )
+      .addIntegerOption(o => o.setName("pocet").setDescription("1–100").setRequired(true))
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
       .toJSON()
   ];
 
   const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
-
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(client.user.id, GUILD_ID),
-      { body: commands }
-    );
-    console.log("✅ Slash command /clear zaregistrován pro tvůj server!");
-  } catch (err) {
-    console.error("❌ Chyba při registraci slash commandu:", err);
-  }
+  await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), { body: commands });
+  console.log("✅ Slash command /clear zaregistrován.");
 });
 
-
-// 🧠 Reakce na příkaz
-client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-  if (interaction.commandName !== "clear") return;
-
-  const count = interaction.options.getInteger("pocet");
-  if (count < 1 || count > 100) {
-    return interaction.reply({
-      content: "⚠️ Zadej číslo 1–100!",
-      flags: 64, // místo ephemeral
-    });
-  }
-
- try {
-  const deleted = await interaction.channel.bulkDelete(count, true);
-  console.log(`🧹 Smazáno ${deleted.size} zpráv v kanálu ${interaction.channel.name}`);
-
-  // tichá “odpověď” – jen aby Discord nehlásil timeout
-  await interaction.reply({ content: "✅ Hotovo", flags: 64 }).catch(() => {});
-
-  // odpověď smaž po půl vteřině
-  setTimeout(() => {
-    interaction.deleteReply().catch(() => {});
-  }, 500);
-
-} catch (err) {
-  if (err.code === 10008) {
-    console.log("⚠️ Některé zprávy už byly smazány dřív, přeskočeno.");
-  } else {
-    console.error("❌ Chyba při mazání zpráv:", err);
-  }
-}
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand() || i.commandName !== "clear") return;
+  const count = i.options.getInteger("pocet");
+  const deleted = await i.channel.bulkDelete(count, true);
+  await i.reply({ content: `✅ Smazáno ${deleted.size} zpráv`, flags: 64 });
+  setTimeout(() => i.deleteReply().catch(() => {}), 1000);
 });
+
+// === 💤 Keepalive ===
+setInterval(() => {
+  fetch("https://discord-bot-i4hx.onrender.com")
+    .then(() => console.log("💓 Keepalive ping"))
+    .catch(e => console.error("⚠️ Keepalive error:", e.message));
+}, 5 * 60 * 1000);
 
 client.login(process.env.BOT_TOKEN);
-console.log("🧠 Instance ID:", Math.random().toString(36).substring(2, 8));
-
-// --- 💤 Keepalive ping každých 5 minut --- //
-import fetch from "node-fetch";
-
-setInterval(() => {
-  const url = "https://discord-bot-i4hx.onrender.com"; // URL tvé služby na Renderu
-  fetch(url)
-    .then(() => console.log("💓 Keepalive ping odeslán"))
-    .catch((err) => console.error("⚠️ Chyba keepalive pingu:", err.message));
-}, 5 * 60 * 1000); // každých 5 minut
-
-
