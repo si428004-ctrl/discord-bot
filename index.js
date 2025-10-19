@@ -277,28 +277,47 @@ client.on("messageReactionRemove", async (reaction, user) => {
   await member.roles.remove(roleId).catch(() => {});
 });
 
-
 // ========== 🔴 Leave & Ban Embedy ==========
 const LEAVE_BAN_CHANNEL_ID = "1428817792991363103";
 
+// 🧠 krátký buffer, aby se nespustil stejný event 2×
+let lastEvent = new Map();
+
 client.on("guildMemberRemove", async member => {
+  const now = Date.now();
+  const last = lastEvent.get(member.id) || 0;
+
+  // 🔒 ochrana: pokud stejný event do 3 sekund → ignoruj duplicitní
+  if (now - last < 3000) return;
+  lastEvent.set(member.id, now);
+
   const channel = member.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
   if (!channel) return;
+
   const embed = new EmbedBuilder()
     .setDescription(`${member.user} to nezvládl a opustil server.`)
-    .setColor("#F8E71C")
+    .setColor("#F8E71C");
+
   await channel.send({ embeds: [embed] });
 });
 
-client.on("guildBanAdd", async (ban) => {
+client.on("guildBanAdd", async ban => {
+  const now = Date.now();
+  const last = lastEvent.get(ban.user.id) || 0;
+
+  // 🔒 ochrana: pokud byl právě zpracován leave → nehlásit znovu
+  if (now - last < 3000) return;
+  lastEvent.set(ban.user.id, now);
+
   const channel = ban.guild.channels.cache.get(LEAVE_BAN_CHANNEL_ID);
   if (!channel) return;
+
   const embed = new EmbedBuilder()
     .setDescription(`${ban.user} dostal BAN!`)
-    .setColor("#FF0000")
+    .setColor("#FF0000");
+
   await channel.send({ embeds: [embed] });
 });
-
 
 // ========== 🟠 Join Embed (Dyno styl) ==========
 const JOIN_ANNOUNCE_CHANNEL_ID = "1400569915437748254";
