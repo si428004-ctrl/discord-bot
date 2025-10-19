@@ -43,61 +43,69 @@ const JOIN_LOG_CHANNEL_ID = '1428864324474114141';
 const VERIFIED_ROLE_ID = '1428624557635407902';
 const UNVERIFIED_ROLE_ID = '1428863230217945198';
 
-client.on('guildMemberAdd', async member => {
-  const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
-  if (!welcomeChannel) return;
-
+client.on("guildMemberAdd", async member => {
   try {
-    // 🟡 Přidat Unverified roli po joinu
+    if (member.user.bot) return;
+
+    // 🟡 Přidat Unverified roli
     await member.roles.add(UNVERIFIED_ROLE_ID);
     console.log(`👤 ${member.user.tag} dostal roli Unverified`);
 
-    // 📩 Poslat otázku
-    const questionMsg = await welcomeChannel.send(
+    // 📢 NAZDAR embed do správného kanálu
+    const welcomeEmbedChannel = member.guild.channels.cache.get("1400569915437748254");
+    if (welcomeEmbedChannel) {
+      const welcomeEmbed = new EmbedBuilder()
+        .setTitle("N A Z D A R !")
+        .setDescription(
+          `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`
+        )
+        .setColor("#FF0000")
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
+
+      await welcomeEmbedChannel.send({ embeds: [welcomeEmbed] });
+    }
+
+    // 📩 Otázka do ověřovacího kanálu
+    const verifyChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    if (!verifyChannel) return;
+
+    const questionMsg = await verifyChannel.send(
       `Ahoj ${member}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?`
     );
 
-    // 📨 Collector na odpověď (24 h timeout)
+    // 📨 Collector na odpověď (24h timeout)
     const filter = m => m.author.id === member.id;
-    const collector = welcomeChannel.createMessageCollector({ filter, max: 1, time: 86400000 });
+    const collector = verifyChannel.createMessageCollector({ filter, max: 1, time: 86400000 });
 
-    collector.on('collect', async msg => {
+    collector.on("collect", async msg => {
       const logChannel = member.guild.channels.cache.get(JOIN_LOG_CHANNEL_ID);
       if (!logChannel) return;
 
-      // 🔴 Úvodní embed s odpovědí
       const embed = new EmbedBuilder()
-        .setTitle(`🆕 Nový člen na serveru`)
-        .setDescription(`👤 **Uživatel:** <@${member.id}>\n📝 **Odpověď:**\n\n${msg.content || '*Žádná odpověď*'}`)
-        .setColor('#ff0000')
-        
+        .setTitle("🆕 Nový člen na serveru")
+        .setDescription(`👤 **Uživatel:** <@${member.id}>\n📝 **Odpověď:**\n\n${msg.content || "*Žádná odpověď*"}`)
+        .setColor("#ff0000");
+
       const logMsg = await logChannel.send({ embeds: [embed] });
+      await logMsg.react("✅");
+      await logMsg.react("❌");
 
-      // ➕ Reakce pro schválení / odmítnutí
-      await logMsg.react('✅');
-      await logMsg.react('❌');
-
-      // 🧼 Smazat otázku + odpověď z welcome
       await msg.delete().catch(() => {});
       await questionMsg.delete().catch(() => {});
-
-
     });
 
-    // ⏰ Timeout – když neodpoví do 24 h, vykopnout
-    collector.on('end', async (collected) => {
+    collector.on("end", async collected => {
       if (collected.size === 0) {
         try {
-          await member.kick('Neodpověděl na uvítací otázku během 24 hodin');
+          await member.kick("Neodpověděl na uvítací otázku během 24 hodin");
           console.log(`⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`);
         } catch (e) {
-          console.error('Chyba při timeout kicku:', e);
+          console.error("Chyba při timeout kicku:", e);
         }
       }
     });
-
   } catch (err) {
-    console.error('Chyba v guildMemberAdd handleru:', err);
+    console.error("Chyba v guildMemberAdd handleru:", err);
   }
 });
 
@@ -302,24 +310,6 @@ client.on("guildBanAdd", async ban => {
   const embed = new EmbedBuilder()
     .setDescription(`${ban.user} dostal BAN!`)
     .setColor("#FF0000");
-
-  await channel.send({ embeds: [embed] });
-});
-
-// ========== 🟠 Join Embed (Welcome Message) ==========
-client.on("guildMemberAdd", async member => {
-  if (member.user.bot) return;
-
-  const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
-  if (!channel) return;
-
-  const embed = new EmbedBuilder()
-    .setTitle("N A Z D A R !")
-    .setDescription(
-      `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`
-    )
-    .setColor("#FF0000")
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
 
   await channel.send({ embeds: [embed] });
 });
