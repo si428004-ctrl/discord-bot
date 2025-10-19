@@ -125,19 +125,24 @@ client.once("ready", async () => {
   }
 });
 
-// === 🟢 Nový člen (JEN JEDEN listener) ===
+// === 🟢 Nový člen (JEN JEDEN listener, teď s extra kontrolou) ===
 client.on("guildMemberAdd", async member => {
   try {
     if (member.user.bot) return;
 
-    // Anti-dupe: pokud to přijde 2× rychle po sobě, ignoruj
+    // 👇 Pokud už má Unverified roli, znamená to, že tohle je duplicitní event → ignoruj
+    if (member.roles.cache.has(UNVERIFIED_ROLE_ID)) {
+      console.log(`⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`);
+      return;
+    }
+
+    // Anti-dupe v rámci procesu (TTL 2 minuty)
     if (withShortLock(processedJoins, member.id, 2 * 60 * 1000)) return;
 
-    // Přidat Unverified
     await member.roles.add(UNVERIFIED_ROLE_ID).catch(() => {});
     console.log(`👤 ${member.user.tag} dostal roli Unverified`);
 
-    // NAZDAR embed do správného kanálu
+    // === EMBED zpráva N A Z D A R ===
     const welcomeEmbedChannel = member.guild.channels.cache.get(NAZDAR_CHANNEL_ID);
     if (welcomeEmbedChannel) {
       const welcomeEmbed = new EmbedBuilder()
@@ -150,7 +155,7 @@ client.on("guildMemberAdd", async member => {
       await welcomeEmbedChannel.send({ embeds: [welcomeEmbed] });
     }
 
-    // Otázka do ověřovacího kanálu
+    // === OTÁZKA do ověřovacího kanálu ===
     const verifyChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (!verifyChannel) return;
 
@@ -158,7 +163,6 @@ client.on("guildMemberAdd", async member => {
       `Ahoj ${member}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?`
     );
 
-    // Collector na odpověď (24h)
     const filter = m => m.author.id === member.id;
     const collector = verifyChannel.createMessageCollector({ filter, max: 1, time: 86400000 });
 
@@ -171,13 +175,9 @@ client.on("guildMemberAdd", async member => {
         .setDescription(`👤 **Uživatel:** <@${member.id}>\n📝 **Odpověď:**\n\n${msg.content || "*Žádná odpověď*"}`)
         .setColor("#ff0000");
 
-      // pošli JEN 1× (Discord někdy vrátí 2×; pojistíme ID zprávy + TTL)
-      const dedupeKey = `joinlog:${member.id}:${msg.id}`;
-      if (!withShortLock(processedReactions, dedupeKey, 60 * 1000)) {
-        const logMsg = await logChannel.send({ embeds: [embed] });
-        await logMsg.react("✅");
-        await logMsg.react("❌");
-      }
+      const logMsg = await logChannel.send({ embeds: [embed] });
+      await logMsg.react("✅");
+      await logMsg.react("❌");
 
       await msg.delete().catch(() => {});
       await questionMsg.delete().catch(() => {});
