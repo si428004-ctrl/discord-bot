@@ -342,9 +342,8 @@ client.on("interactionCreate", async i => {
       if (logCh) {
         const embed = new EmbedBuilder()
           .setTitle("🚫 BAN")
-          .setDescription(`**Uživatel:** <@${userId}> (${userId})\n**Banned by:** <@${i.user.id}>\n**Důvod:** ${reason}`)
+          .setDescription(`**User:** <@${userId}> (${userId})\n**Banned by:** <@${i.user.id}>\n**Reason:** ${reason}`)
           .setColor("#FF0000")
-          .setTimestamp();
         await logCh.send({ embeds: [embed] });
       }
     } catch (err) {
