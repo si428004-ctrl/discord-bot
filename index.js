@@ -88,43 +88,7 @@ client.on('guildMemberAdd', async member => {
       await msg.delete().catch(() => {});
       await questionMsg.delete().catch(() => {});
 
-      // 🎯 Reaction collector pro adminy
-      const reactionFilter = (reaction, user) =>
-        ['✅', '❌'].includes(reaction.emoji.name) && !user.bot;
-      const reactionCollector = logMsg.createReactionCollector({ filter: reactionFilter, max: 1, time: 86400000 });
 
-      reactionCollector.on('collect', async (reaction, user) => {
-        if (reaction.emoji.name === '✅') {
-          try {
-            await member.roles.add(VERIFIED_ROLE_ID);
-            await member.roles.remove(UNVERIFIED_ROLE_ID).catch(() => {});
-            await logMsg.delete().catch(() => {});
-
-            // 🟢 Schválen embed
-            const approvedEmbed = new EmbedBuilder()
-              .setDescription(`<@${member.id}> byl schválen uživatelem <@${user.id}> ✅`)
-              .setColor('#1df300')
-              
-            await logChannel.send({ embeds: [approvedEmbed] });
-          } catch (e) {
-            console.error('Chyba při přidávání role:', e);
-          }
-        } else if (reaction.emoji.name === '❌') {
-          try {
-            await member.kick(`Zamítnuto ${user.tag}`);
-            await logMsg.delete().catch(() => {});
-
-            // 🔴 Odmítnut embed
-            const deniedEmbed = new EmbedBuilder()
-              .setDescription(`<@${member.id}> byl odmítnut uživatelem <@${user.id}> ❌`)
-              .setColor('#ff0000')
-              
-            await logChannel.send({ embeds: [deniedEmbed] });
-          } catch (e) {
-            console.error('Chyba při kicku:', e);
-          }
-        }
-      });
     });
 
     // ⏰ Timeout – když neodpoví do 24 h, vykopnout
@@ -141,6 +105,54 @@ client.on('guildMemberAdd', async member => {
 
   } catch (err) {
     console.error('Chyba v guildMemberAdd handleru:', err);
+  }
+});
+
+// === 🧩 Trvalý posluchač reakcí pro schvalování uživatelů ===
+client.on("messageReactionAdd", async (reaction, user) => {
+  try {
+    if (user.bot) return;
+    if (!reaction.message.guild) return;
+
+    // reaguj pouze v log kanálu
+    if (reaction.message.channelId !== JOIN_LOG_CHANNEL_ID) return;
+
+    const embed = reaction.message.embeds?.[0];
+    if (!embed?.title?.includes("Nový člen na serveru")) return;
+
+    // z description vytáhneme ID uživatele
+    const match = embed.description?.match(/<@(\d+)>/);
+    if (!match) return;
+    const memberId = match[1];
+
+    const guild = reaction.message.guild;
+    const member = await guild.members.fetch(memberId).catch(() => null);
+    if (!member) return;
+
+    // ✅ schválení
+    if (reaction.emoji.name === "✅") {
+      await member.roles.add(VERIFIED_ROLE_ID).catch(() => {});
+      await member.roles.remove(UNVERIFIED_ROLE_ID).catch(() => {});
+      await reaction.message.delete().catch(() => {});
+
+      const approvedEmbed = new EmbedBuilder()
+        .setDescription(`<@${member.id}> byl schválen uživatelem <@${user.id}> ✅`)
+        .setColor("#1df300");
+      await reaction.message.channel.send({ embeds: [approvedEmbed] });
+    }
+
+    // ❌ odmítnutí
+    if (reaction.emoji.name === "❌") {
+      await member.kick(`Zamítnuto ${user.tag}`).catch(() => {});
+      await reaction.message.delete().catch(() => {});
+
+      const deniedEmbed = new EmbedBuilder()
+        .setDescription(`<@${member.id}> byl odmítnut uživatelem <@${user.id}> ❌`)
+        .setColor("#ff0000");
+      await reaction.message.channel.send({ embeds: [deniedEmbed] });
+    }
+  } catch (err) {
+    console.error("⚠️ Chyba při zpracování schvalovací reakce:", err);
   }
 });
 
