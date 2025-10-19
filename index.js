@@ -197,7 +197,7 @@ const EMOJI_ROLE_MAP = {
   "<:mid:1423344256076091402>": "1423292659572674570"
 };
 
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   const channel = await client.channels.fetch(ROLE_SELECT_CHANNEL_ID).catch(() => null);
   if (!channel) return console.warn("⚠️ Reaction role kanál nenalezen");
 
@@ -302,6 +302,24 @@ client.on("guildBanAdd", async ban => {
   const embed = new EmbedBuilder()
     .setDescription(`${ban.user} dostal BAN!`)
     .setColor("#FF0000");
+
+  await channel.send({ embeds: [embed] });
+});
+
+// ========== 🟠 Join Embed (Welcome Message) ==========
+client.on("guildMemberAdd", async member => {
+  if (member.user.bot) return;
+
+  const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+  if (!channel) return;
+
+  const embed = new EmbedBuilder()
+    .setTitle("N A Z D A R !")
+    .setDescription(
+      `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`
+    )
+    .setColor("#FF0000")
+    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
 
   await channel.send({ embeds: [embed] });
 });
