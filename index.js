@@ -319,28 +319,6 @@ client.on("guildBanAdd", async ban => {
   await channel.send({ embeds: [embed] });
 });
 
-// ========== 🟠 Join Embed (Dyno styl) ==========
-const JOIN_ANNOUNCE_CHANNEL_ID = "1400569915437748254";
-
-client.on("guildMemberAdd", async member => {
-  // 🔒 Ignoruj bota (ať sám sobě neposílá welcome)
-  if (member.user.bot) return;
-
-  const channel = member.guild.channels.cache.get(JOIN_ANNOUNCE_CHANNEL_ID);
-  if (!channel) return;
-
-  const embed = new EmbedBuilder()
-    .setTitle("N A Z D A R !")
-    .setDescription(
-      `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!`
-    )
-    .setColor("#FF0000")
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
-    // ❌ odstraněno .setTimestamp()
-
-  await channel.send({ embeds: [embed] });
-});
-
 // ========== 🧮 AUTO COUNTER SYNC (nová, jednoduchá verze) ==========
 const MEMBER_STATS_CHANNEL_ID = "1429158078980423913"; // Members kanál
 const UNVERIFIED_STATS_CHANNEL_ID = "1429189687288926379"; // Unverified kanál
