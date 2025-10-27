@@ -308,7 +308,6 @@
       gap: 16px;
     }
 
-    /* taková "mini-card" uvnitř pro LEAVE a pro BAN */
     .subcard-block {
       background: var(--bg-card-alt);
       border: 1px solid var(--border-col);
@@ -320,7 +319,6 @@
       font-size: .8rem;
     }
 
-    /* řádky uvnitř těch sub bloků (text + barva vedle sebe apod.) */
     .subcard-row {
       display: flex;
       flex-wrap: wrap;
@@ -690,6 +688,46 @@
         </div>
       </section>
 
+      <!-- BAN LOG (embed pro /ban) -->
+      <section class="card" id="banLogCard">
+        <div class="card-header">
+          <div class="left">
+            <div class="label">/ban log</div>
+            <h2>Embed posílaný při /ban</h2>
+            <div class="desc">
+              To, co bot posílá do Online Log kanálu po úspěšném /ban.
+              Můžeš použít placeholdery:<br/>
+              {USER} = ping na banovanýho<br/>
+              {USER_ID} = ID banovanýho<br/>
+              {MOD} = kdo banoval<br/>
+              {REASON} = důvod
+            </div>
+          </div>
+        </div>
+
+        <div class="section-grid">
+          <div class="field">
+            <label>Nadpis embedu</label>
+            <input id="banLogTitle" class="txt" placeholder="🚫 BAN" />
+          </div>
+
+          <div class="field">
+            <label>Barva embedu</label>
+            <input id="banLogColor" class="color" type="color" />
+          </div>
+
+          <div class="field" style="grid-column:1 / -1;">
+            <label>Tělo embedu</label>
+            <textarea id="banLogDesc" class="txt" placeholder="**User:** {USER} ({USER_ID})\n**Banned by:** {MOD}\n**Reason:** {REASON}"></textarea>
+          </div>
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn sec" onclick="resetBanLog()">Zrušit změny</button>
+          <button class="btn" onclick="saveBanLog()">Uložit</button>
+        </div>
+      </section>
+
     </main>
 
     <!-- SIDE COLUMN -->
@@ -712,7 +750,7 @@
           <input style="display:none" type="file" id="avatarInput" accept="image/*" />
           <button class="btn sec" style="width:100%;" onclick="document.getElementById('avatarInput').click()">Vybrat obrázek</button>
           <button class="btn" style="width:100%;" onclick="uploadAvatar()">Nastavit jako avatar bota</button>
-          <div class="hint">Dáme POST /upload-avatar → bot zavolá client.user.setAvatar() z bufferu.</div>
+          <div class="hint">Počítáme s POST /upload-avatar → server zavolá client.user.setAvatar().</div>
         </div>
       </section>
 
@@ -723,8 +761,8 @@
             <div class="label">Nasazení</div>
             <h2>Deploy & údržba</h2>
             <div class="desc">
-              Tadyhle bude časem “git add / commit / push” + reload configu v běžícím botu.
-              Zatím jen mock tlačítka.
+              “git add / commit / push” + reload configu v běžícím botu.
+              Reload už jede, git push je zatím mock.
             </div>
           </div>
         </div>
@@ -755,7 +793,7 @@
         if (!res.ok) throw new Error("Fetch /config selhal");
         state = await res.json();
 
-        // Helpery, aby to necrashlo když nějakej input není
+        // helpery
         const setVal = (id, val) => {
           const el = document.getElementById(id);
           if (el) el.value = val ?? "";
@@ -799,6 +837,7 @@
             setColor('welcomeColor', wf.greetingEmbed.color);
             setVal('welcomeDesc', wf.greetingEmbed.description);
           }
+
           setVal('verifyQuestionText', wf.verifyQuestionText);
           setVal('timeoutKickReason', wf.timeoutKickReason);
 
@@ -827,7 +866,10 @@
             setVal('rrThumb', state.reactionRoles.embed.thumbnailUrl);
             setVal('rrImage', state.reactionRoles.embed.imageUrl);
           }
-
+          renderReactionList();
+        } else {
+          // pokud reactionRoles vůbec není, inicializuj aby přidávání fungovalo
+          state.reactionRoles = { embed: {}, emojiRoleMap: [] };
           renderReactionList();
         }
 
@@ -843,7 +885,7 @@
           }
         }
 
-        // BAN COMMAND LOG (log /ban do onlineLogChannelId)
+        // BAN COMMAND LOG
         if (state.banCommandLog) {
           setVal('banLogTitle', state.banCommandLog.title);
           setColor('banLogColor', state.banCommandLog.color);
@@ -867,7 +909,6 @@
 
       wrap.innerHTML = "";
 
-      // V configu máš array [{emoji, roleId, label}, ...]
       const arr = state.reactionRoles?.emojiRoleMap || [];
       arr.forEach((row, idx) => {
         const rowDiv = document.createElement('div');
@@ -903,7 +944,7 @@
 
     // === SAVE HANDLERS ===
 
-    // Bot jméno / status -> voláme náš backend endpoint /save-botsettings
+    // 1) BOT IDENTITY
     function saveBotInfo() {
       const displayName = document.getElementById("botDisplayName").value.trim();
       const statusText = document.getElementById("botStatus").value.trim();
@@ -917,7 +958,7 @@
       .then(resp => {
         if (resp.ok) {
           alert(`✅ Uloženo! Bot se pokusí přejmenovat na "${displayName}" a změnit status.`);
-          loadInitial(); // po uložení znova natáhnem config
+          loadInitial();
         } else {
           alert("❌ Chyba při ukládání: " + (resp.error || "neznámá chyba"));
         }
@@ -932,17 +973,50 @@
       loadInitial();
     }
 
-    // IDs / kanály / role – zatím mock (nemáme backend /save-ids zatím hotovej)
+    // 2) CHANNELS / ROLES / IDs
     function saveIds(){
-      alert("zatím mock -> až přidáme /save-ids na backend");
+      const body = {
+        guildId: document.getElementById('guildId').value.trim(),
+        welcomeChannelId: document.getElementById('welcomeChannelId').value.trim(),
+        joinLogChannelId: document.getElementById('joinLogChannelId').value.trim(),
+        roleSelectChannelId: document.getElementById('roleSelectChannelId').value.trim(),
+        nazdarChannelId: document.getElementById('nazdarChannelId').value.trim(),
+        leaveBanChannelId: document.getElementById('leaveBanChannelId').value.trim(),
+        onlineLogChannelId: document.getElementById('onlineLogChannelId').value.trim(),
+        memberStatsChannelId: document.getElementById('memberStatsChannelId').value.trim(),
+        unverifiedStatsChannelId: document.getElementById('unverifiedStatsChannelId').value.trim(),
+        verifiedRoleId: document.getElementById('verifiedRoleId').value.trim(),
+        unverifiedRoleId: document.getElementById('unverifiedRoleId').value.trim(),
+        fallenPhoenixId: document.getElementById('fallenPhoenixId').value.trim()
+      };
+
+      fetch("/save-ids", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(r => r.json())
+      .then(resp => {
+        if (resp.ok) {
+          alert("✅ IDs uložený. Bot teď pojede s novejma kanálama/rolama.");
+          loadInitial();
+        } else {
+          alert("❌ Chyba při ukládání IDček: " + (resp.error || "neznámá chyba"));
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Nepovedlo se spojit se serverem (/save-ids).");
+      });
     }
+
     function resetIds(){
       loadInitial();
     }
 
-    // Welcome / verify / approve-deny – to backend UŽ máme (/save-welcome)
+    // 3) WELCOME / VERIFY / APPROVE-DENY
     function saveWelcome(){
-      const data = {
+      const body = {
         greetingEmbed: {
           title: document.getElementById('welcomeTitle').value.trim(),
           color: document.getElementById('welcomeColor').value,
@@ -968,20 +1042,20 @@
       fetch("/save-welcome", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(body)
       })
       .then(r => r.json())
       .then(resp => {
         if (resp.ok) {
-          alert("Uloženo ✅ Bot teď jede s novým nastavením.");
+          alert("✅ Welcome flow uložený. Noví joiny už jedou podle tohohle.");
           loadInitial();
         } else {
-          alert("❌ Chyba při ukládání na server");
+          alert("❌ Chyba při ukládání welcome nastavení.");
         }
       })
       .catch(err => {
         console.error(err);
-        alert("❌ Nepovedlo se spojit se serverem (fetch /save-welcome spadnul)");
+        alert("❌ Nepovedlo se spojit se serverem (/save-welcome).");
       });
     }
 
@@ -989,26 +1063,123 @@
       loadInitial();
     }
 
-    // Reaction roles – zatím mock, backend endpoint ještě neexistuje
+    // 4) REACTION ROLES
     function saveReactions(){
-      alert("zatím mock -> až přidáme /save-reactionroles na backend");
+      // seber embed settings
+      const embedBlock = {
+        title: document.getElementById('rrTitle').value.trim(),
+        color: document.getElementById('rrColor').value,
+        description: document.getElementById('rrDescription').value.trim(),
+        thumbnailUrl: document.getElementById('rrThumb').value.trim(),
+        imageUrl: document.getElementById('rrImage').value.trim()
+      };
+
+      // seber jednotlivý řádky emoji/role
+      const rows = [];
+      const rowEls = document.querySelectorAll('#reactionList .reaction-row');
+      rowEls.forEach(rowEl => {
+        const emoji = rowEl.querySelector('.emoji-box').innerText.trim();
+        const label = rowEl.querySelector('input[data-field="label"]').value.trim();
+        const roleId = rowEl.querySelector('input[data-field="roleId"]').value.trim();
+        if (emoji || roleId || label) {
+          rows.push({ emoji, label, roleId });
+        }
+      });
+
+      const body = {
+        embed: embedBlock,
+        emojiRoleMap: rows
+      };
+
+      fetch("/save-reactionroles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(r => r.json())
+      .then(resp => {
+        if (resp.ok) {
+          alert("✅ Reaction roles uložený.");
+          loadInitial();
+        } else {
+          alert("❌ Chyba při ukládání reaction roles: " + (resp.error || "neznámá chyba"));
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Nepovedlo se spojit se serverem (/save-reactionroles).");
+      });
     }
+
     function resetReactions(){
       loadInitial();
     }
 
-    // Leave / Ban log – zatím mock
+    // 5) LEAVE / BAN LOG
     function saveLeaveBan(){
-      alert("zatím mock -> /save-leaveban zatím není");
+      const body = {
+        leave: {
+          textTemplate: document.getElementById('leaveText').value.trim(),
+          color: document.getElementById('leaveColor').value
+        },
+        ban: {
+          textTemplate: document.getElementById('banText').value.trim(),
+          color: document.getElementById('banColor').value
+        }
+      };
+
+      fetch("/save-leaveban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(r => r.json())
+      .then(resp => {
+        if (resp.ok) {
+          alert("✅ Leave/Ban log zprávy uložený.");
+          loadInitial();
+        } else {
+          alert("❌ Chyba při ukládání leave/ban: " + (resp.error || "neznámá chyba"));
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Nepovedlo se spojit se serverem (/save-leaveban).");
+      });
     }
+
     function resetLeaveBan(){
       loadInitial();
     }
 
-    // Ban log embed (/ban) – zatím mock
+    // 6) BAN LOG (co se posílá do onlineLogChannelId po /ban)
     function saveBanLog(){
-      alert("zatím mock -> /save-banlog zatím není");
+      const body = {
+        title: document.getElementById('banLogTitle').value.trim(),
+        color: document.getElementById('banLogColor').value,
+        descriptionTemplate: document.getElementById('banLogDesc').value.trim()
+      };
+
+      fetch("/save-banlog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(r => r.json())
+      .then(resp => {
+        if (resp.ok) {
+          alert("✅ /ban log embed uložený.");
+          loadInitial();
+        } else {
+          alert("❌ Chyba při ukládání ban logu: " + (resp.error || "neznámá chyba"));
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Nepovedlo se spojit se serverem (/save-banlog).");
+      });
     }
+
     function resetBanLog(){
       loadInitial();
     }
@@ -1033,7 +1204,7 @@
         alert("Nejdřív vyber obrázek 💀");
         return;
       }
-      alert("zatím mock -> /upload-avatar zatím není");
+      alert("zatím mock -> /upload-avatar ještě není hotovej");
     }
 
     // Deploy / reload tlačítka
@@ -1043,6 +1214,7 @@
         .then(resp => {
           if (resp.ok) {
             alert("♻️ Reloadnuto v běžícím botovi");
+            loadInitial();
           } else {
             alert("❌ Reload selhal");
           }
