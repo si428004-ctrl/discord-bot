@@ -2,160 +2,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import fs from "fs";
+import multer from "multer";
 import fetch from "node-fetch";
-dotenv.config();
-
-// --- 📁 Načtení konfiguračního JSONu --- //
-let config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
-
-// --- 🔁 Reload configu + update bota --- //
-function reloadConfig() {
-  try {
-    config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
-    console.log("♻️ Config reloadnutý.");
-
-    if (client?.user && config.botIdentity?.displayName) {
-      client.user.setUsername(config.botIdentity.displayName)
-        .then(() => console.log(`💫 Bot přejmenován na: ${config.botIdentity.displayName}`))
-        .catch(err => console.warn("⚠️ Nepodařilo se změnit jméno bota:", err.message));
-    }
-
-    if (client?.user && config.botIdentity?.statusText) {
-      client.user.setPresence({
-        activities: [{ name: config.botIdentity.statusText }],
-        status: "online"
-      });
-      console.log(`💬 Status bota nastaven na: ${config.botIdentity.statusText}`);
-    }
-  } catch (err) {
-    console.error("❌ Chyba při reloadu configu:", err.message);
-  }
-}
-
-// --- 🌐 Express server --- //
-const app = express();
-const PORT = process.env.PORT || 10000;
-app.use(express.json());
-
-// --- ✅ Healthcheck --- //
-app.get("/", (req, res) => res.send("✅ Bot is running!"));
-
-// --- 🧩 GET /config – pošle celý config dashboardu --- //
-app.get("/config", (req, res) => {
-  try {
-    const raw = fs.readFileSync("./config.json", "utf8");
-    const json = JSON.parse(raw);
-    res.json(json);
-  } catch (err) {
-    console.error("❌ Chyba při čtení configu:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// --- 💾 POST /save-welcome --- //
-app.post("/save-welcome", (req, res) => {
-  try {
-    const incoming = req.body;
-    config.welcomeFlow = incoming;
-    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
-    reloadConfig();
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("❌ /save-welcome error:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// --- 💾 POST /save-botsettings --- //
-app.post("/save-botsettings", (req, res) => {
-  try {
-    const { displayName, statusText } = req.body;
-    if (!displayName || !displayName.trim())
-      return res.status(400).json({ ok: false, error: "Missing displayName" });
-
-    if (!config.botIdentity) config.botIdentity = {};
-    config.botIdentity.displayName = displayName.trim();
-    config.botIdentity.statusText = statusText?.trim() || "";
-    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
-    reloadConfig();
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("❌ /save-botsettings error:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// --- 💾 POST /save-ids --- //
-app.post("/save-ids", (req, res) => {
-  try {
-    config.channelsAndRoles = req.body;
-    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("❌ /save-ids error:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// --- 💾 POST /save-reactionroles --- //
-app.post("/save-reactionroles", (req, res) => {
-  try {
-    config.reactionRoles = req.body;
-    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("❌ /save-reactionroles error:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// --- 💾 POST /save-leaveban --- //
-app.post("/save-leaveban", (req, res) => {
-  try {
-    config.leaveBanLogs = req.body;
-    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("❌ /save-leaveban error:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// --- 💾 POST /save-banlog --- //
-app.post("/save-banlog", (req, res) => {
-  try {
-    config.banCommandLog = req.body;
-    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("❌ /save-banlog error:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// --- ⚙️ /reload-config --- //
-app.post("/reload-config", (req, res) => {
-  reloadConfig();
-  res.json({ ok: true, message: "Config reloadnutý." });
-});
-
-// --- 🧠 /admin – dashboard --- //
-app.get("/admin", (req, res) => {
-  try {
-    const html = fs.readFileSync("./discordbot.html", "utf8");
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.send(html);
-  } catch (err) {
-    console.error("❌ Nemůžu načíst dashboard:", err);
-    res.status(500).send("Dashboard se nepodařilo načíst.");
-  }
-});
-
-app.listen(PORT, () =>
-  console.log(`🌐 Mini server běží na portu ${PORT}`)
-);
-
-// --- 🤖 Discord Bot --- //
+import { exec } from "child_process";
 import {
   Client,
   GatewayIntentBits,
@@ -167,6 +16,15 @@ import {
   PermissionFlagsBits
 } from "discord.js";
 
+dotenv.config();
+
+// --- 🖼 Multer setup pro upload avataru --- //
+const upload = multer({ storage: multer.memoryStorage() });
+
+// --- 📁 Načtení konfiguračního JSONu --- //
+let config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+
+// --- 🤖 Discord Bot klient --- //
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -175,14 +33,947 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions
   ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember]
+  partials: [
+    Partials.Message,
+    Partials.Channel,
+    Partials.Reaction,
+    Partials.User,
+    Partials.GuildMember
+  ]
 });
 
-// 💤 Keepalive ping
+// --- 🧠 Anti-dupe zámky / helpery (musí být definované před použitím v eventech) --- //
+const processedJoins = new Set();
+const processedReactions = new Set();
+const lastEvent = new Map();
+
+function withShortLock(set, key, ttlMs) {
+  if (set.has(key)) return true;
+  set.add(key);
+  setTimeout(() => set.delete(key), ttlMs);
+  return false;
+}
+
+// postaví mapu emoji -> roleId z configu.reactionRoles.emojiRoleMap
+function buildEmojiRoleMap() {
+  const map = {};
+  for (const entry of (config.reactionRoles?.emojiRoleMap || [])) {
+    if (entry.emoji && entry.roleId) {
+      map[entry.emoji] = entry.roleId;
+    }
+  }
+  return map;
+}
+
+// rozbalí templaty typu {USER}, {ANSWER}, {MOD}, ...
+function fillTemplate(str, vars) {
+  if (!str) return "";
+  return str
+    .replace(/\{USER\}/g, vars.USER ?? "")
+    .replace(/\{MOD\}/g, vars.MOD ?? "")
+    .replace(/\{ANSWER\}/g, vars.ANSWER ?? "")
+    .replace(/\{REASON\}/g, vars.REASON ?? "")
+    .replace(/\{USER_ID\}/g, vars.USER_ID ?? "");
+}
+
+// --- 🔁 Reload configu + update identity bota --- //
+function reloadConfig() {
+  try {
+    config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+    console.log("♻️ Config reloadnutý.");
+
+    if (client?.user && config.botIdentity?.displayName) {
+      client.user
+        .setUsername(config.botIdentity.displayName)
+        .then(() =>
+          console.log(
+            `💫 Bot přejmenován na: ${config.botIdentity.displayName}`
+          )
+        )
+        .catch(err =>
+          console.warn(
+            "⚠️ Nepodařilo se změnit jméno bota:",
+            err.message
+          )
+        );
+    }
+
+    if (client?.user && config.botIdentity?.statusText) {
+      client.user.setPresence({
+        activities: [{ name: config.botIdentity.statusText }],
+        status: "online"
+      });
+      console.log(
+        `💬 Status bota nastaven na: ${config.botIdentity.statusText}`
+      );
+    }
+  } catch (err) {
+    console.error("❌ Chyba při reloadu configu:", err.message);
+  }
+}
+
+// --- 🌐 Express server --- //
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+// umíme číst JSON body a file upload
+app.use(express.json());
+
+// --- 🔒 Basic auth middleware --- //
+function requireAdminAuth(req, res, next) {
+  const auth = req.headers.authorization || "";
+
+  if (!auth.startsWith("Basic ")) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="Restricted Area"');
+    return res.status(401).send("Auth required");
+  }
+
+  const base64 = auth.replace("Basic ", "").trim();
+  let decoded = "";
+  try {
+    decoded = Buffer.from(base64, "base64").toString("utf8");
+  } catch (e) {
+    console.warn("⚠️ Basic auth decode fail:", e.message);
+  }
+
+  const sepIndex = decoded.indexOf(":");
+  const user = decoded.substring(0, sepIndex);
+  const pass = decoded.substring(sepIndex + 1);
+
+  const okUser = process.env.ADMIN_USER;
+  const okPass = process.env.ADMIN_PASS;
+
+  if (user === okUser && pass === okPass) {
+    return next();
+  }
+
+  res.setHeader("WWW-Authenticate", 'Basic realm="Restricted Area"');
+  return res.status(401).send("Not authorized");
+}
+
+// --- ✅ Healthcheck (veřejné kvůli Renderu) --- //
+app.get("/", (req, res) => res.send("✅ Bot is running!"));
+
+// --- 🧩 GET /config – dashboard si tím načítá current state --- //
+app.get("/config", requireAdminAuth, (req, res) => {
+  try {
+    const raw = fs.readFileSync("./config.json", "utf8");
+    const json = JSON.parse(raw);
+    res.json(json);
+  } catch (err) {
+    console.error("❌ Chyba při čtení configu:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- 💾 POST /save-welcome --- //
+// tahle route přepíše jednotlivý části welcomeFlow
+app.post("/save-welcome", requireAdminAuth, (req, res) => {
+  try {
+    const incoming = req.body;
+
+    // bezpečně přepíšeme díly welcomeFlow tak,
+    // aby struktura (greetingEmbed / modLogEmbed / approveMessage / rejectMessage) zůstala
+    if (!config.welcomeFlow) config.welcomeFlow = {};
+
+    // greetingEmbed
+    if (!config.welcomeFlow.greetingEmbed)
+      config.welcomeFlow.greetingEmbed = {};
+    config.welcomeFlow.greetingEmbed.title =
+      incoming.greetingEmbed?.title ?? config.welcomeFlow.greetingEmbed.title;
+    config.welcomeFlow.greetingEmbed.color =
+      incoming.greetingEmbed?.color ?? config.welcomeFlow.greetingEmbed.color;
+    config.welcomeFlow.greetingEmbed.description =
+      incoming.greetingEmbed?.description ??
+      config.welcomeFlow.greetingEmbed.description;
+
+    // verify / timeoutKickReason
+    config.welcomeFlow.verifyQuestionText =
+      incoming.verifyQuestionText ?? config.welcomeFlow.verifyQuestionText;
+    config.welcomeFlow.timeoutKickReason =
+      incoming.timeoutKickReason ?? config.welcomeFlow.timeoutKickReason;
+
+    // modLogEmbed
+    if (!config.welcomeFlow.modLogEmbed)
+      config.welcomeFlow.modLogEmbed = {};
+    config.welcomeFlow.modLogEmbed.title =
+      incoming.modLogEmbed?.title ?? config.welcomeFlow.modLogEmbed.title;
+    config.welcomeFlow.modLogEmbed.color =
+      incoming.modLogEmbed?.color ?? config.welcomeFlow.modLogEmbed.color;
+    config.welcomeFlow.modLogEmbed.descriptionTemplate =
+      incoming.modLogEmbed?.descriptionTemplate ??
+      config.welcomeFlow.modLogEmbed.descriptionTemplate;
+
+    // approveMessage
+    if (!config.welcomeFlow.modLogEmbed.approveMessage)
+      config.welcomeFlow.modLogEmbed.approveMessage = {};
+    config.welcomeFlow.modLogEmbed.approveMessage.textTemplate =
+      incoming.modLogEmbed?.approveMessage?.textTemplate ??
+      config.welcomeFlow.modLogEmbed.approveMessage.textTemplate;
+    config.welcomeFlow.modLogEmbed.approveMessage.color =
+      incoming.modLogEmbed?.approveMessage?.color ??
+      config.welcomeFlow.modLogEmbed.approveMessage.color;
+
+    // rejectMessage
+    if (!config.welcomeFlow.modLogEmbed.rejectMessage)
+      config.welcomeFlow.modLogEmbed.rejectMessage = {};
+    config.welcomeFlow.modLogEmbed.rejectMessage.textTemplate =
+      incoming.modLogEmbed?.rejectMessage?.textTemplate ??
+      config.welcomeFlow.modLogEmbed.rejectMessage.textTemplate;
+    config.welcomeFlow.modLogEmbed.rejectMessage.color =
+      incoming.modLogEmbed?.rejectMessage?.color ??
+      config.welcomeFlow.modLogEmbed.rejectMessage.color;
+
+    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+
+    // aktualizuj bota (status/jméno apod. pokud by se tam někdy propsalo)
+    reloadConfig();
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /save-welcome error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- 💾 POST /save-botsettings --- //
+app.post("/save-botsettings", requireAdminAuth, (req, res) => {
+  try {
+    const { displayName, statusText } = req.body;
+    if (!displayName || !displayName.trim()) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Missing displayName" });
+    }
+
+    if (!config.botIdentity) config.botIdentity = {};
+    config.botIdentity.displayName = displayName.trim();
+    config.botIdentity.statusText = statusText?.trim() || "";
+
+    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+
+    reloadConfig(); // tohle nastaví username + presence
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /save-botsettings error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- 💾 POST /upload-avatar --- //
+app.post(
+  "/upload-avatar",
+  requireAdminAuth,
+  upload.single("avatarFile"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ ok: false, error: "Chybí soubor." });
+      }
+
+      if (!client?.user) {
+        return res
+          .status(500)
+          .json({ ok: false, error: "Bot client není připraven." });
+      }
+
+      const buffer = req.file.buffer;
+
+      await client.user.setAvatar(buffer);
+      console.log("🖼 Avatar bota aktualizován.");
+
+      // uložíme preview, aby dashboard viděl novej avatar i bez refreshnutí Discordu
+      const base64 = `data:${req.file.mimetype};base64,${buffer.toString(
+        "base64"
+      )}`;
+      config.avatarPreviewUrl = base64;
+      fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("❌ /upload-avatar error:", err);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+// --- 💾 POST /save-ids --- //
+app.post("/save-ids", requireAdminAuth, (req, res) => {
+  try {
+    config.channelsAndRoles = req.body;
+    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /save-ids error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- 💾 POST /save-reactionroles --- //
+app.post("/save-reactionroles", requireAdminAuth, (req, res) => {
+  try {
+    config.reactionRoles = req.body;
+    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /save-reactionroles error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- 💾 POST /save-leaveban --- //
+app.post("/save-leaveban", requireAdminAuth, (req, res) => {
+  try {
+    config.leaveBanLogs = req.body;
+    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /save-leaveban error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- 💾 POST /save-banlog --- //
+app.post("/save-banlog", requireAdminAuth, (req, res) => {
+  try {
+    config.banCommandLog = req.body;
+    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /save-banlog error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- ♻️ POST /reload-config --- //
+app.post("/reload-config", requireAdminAuth, (req, res) => {
+  reloadConfig();
+  res.json({ ok: true, message: "Config reloadnutý." });
+});
+
+// --- 🚀 POST /publish (git add/commit/push) --- //
+app.post("/publish", requireAdminAuth, (req, res) => {
+  try {
+    const { secret } = req.body;
+
+    // druhá vrstva ochrany = secret ve promptu z dashboardu
+    if (!secret || secret !== process.env.PUBLISH_SECRET) {
+      console.warn("❌ /publish odmítnuto: špatný secret");
+      return res.status(403).json({ ok: false, error: "Invalid secret" });
+    }
+
+    const cmd =
+      'git add config.json && ' +
+      'git commit -m "dashboard update" || echo "nothing to commit" && ' +
+      `git push origin ${process.env.GIT_BRANCH || "main"}`;
+
+    exec(cmd, { cwd: process.cwd() }, (err, stdout, stderr) => {
+      console.log("📦 [publish] stdout:", stdout);
+      console.log("📦 [publish] stderr:", stderr);
+
+      if (err) {
+        console.error("❌ /publish git error:", err.message);
+        return res
+          .status(500)
+          .json({ ok: false, error: "git push fail", detail: stderr });
+      }
+
+      res.json({ ok: true, log: stdout });
+    });
+  } catch (err) {
+    console.error("❌ /publish handler error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- 🧠 GET /admin – dashboard HTML --- //
+app.get("/admin", requireAdminAuth, (req, res) => {
+  try {
+    const html = fs.readFileSync("./discordbot.html", "utf8");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  } catch (err) {
+    console.error("❌ Nemůžu načíst dashboard:", err);
+    res.status(500).send("Dashboard se nepodařilo načíst.");
+  }
+});
+
+// --- 🌍 Start Express --- //
+app.listen(PORT, () =>
+  console.log(`🌐 Mini server běží na portu ${PORT}`)
+);
+
+// =====================
+// 🤖 DISCORD BOT LOGIKA
+// =====================
+
+// === READY EVENT ===
+client.once("ready", async () => {
+  console.log(`✅ Přihlášen jako ${client.user.tag}`);
+
+  // po přihlášení ping do onlineLogChannelId
+  {
+    const chId = config.channelsAndRoles?.onlineLogChannelId;
+    const logCh = chId ? client.channels.cache.get(chId) : null;
+    if (logCh) {
+      logCh.send("🟢 Bot je zpět online");
+    }
+  }
+
+  // zaregistruj slash commands /clear a /ban
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("clear")
+      .setDescription("🧹 Smaže poslední zprávy v tomto kanálu.")
+      .addIntegerOption(o =>
+        o
+          .setName("pocet")
+          .setDescription("1–100")
+          .setRequired(true)
+      )
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+    new SlashCommandBuilder()
+      .setName("ban")
+      .setDescription(
+        "🔨 Zabanovat uživatele podle ID (i když není na serveru)"
+      )
+      .addStringOption(o =>
+        o
+          .setName("userid")
+          .setDescription("ID uživatele k banu")
+          .setRequired(true)
+      )
+      .addStringOption(o =>
+        o
+          .setName("duvod")
+          .setDescription("Důvod banu (volitelné)")
+          .setRequired(false)
+      )
+      .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+  ].map(cmd => cmd.toJSON());
+
+  const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
+  await rest.put(
+    Routes.applicationGuildCommands(
+      client.user.id,
+      config.channelsAndRoles.guildId
+    ),
+    { body: commands }
+  );
+  console.log("✅ Slash commands /clear a /ban zaregistrovány.");
+
+  // Reaction Roles – po startu zkontroluj, jestli embed existuje, když ne, pošli ho a přidej emoji
+  try {
+    const channel = await client.channels
+      .fetch(config.channelsAndRoles.roleSelectChannelId)
+      .catch(() => null);
+
+    if (!channel) {
+      console.warn("⚠️ Reaction role kanál nenalezen");
+    } else {
+      const guild = client.guilds.cache.first();
+      if (guild) await guild.emojis.fetch().catch(() => {});
+      const messages = await channel.messages.fetch({ limit: 10 }).catch(() => null);
+
+      const rrEmbedCfg = config.reactionRoles.embed;
+      const ROLE_SELECT_MESSAGE_TITLE = rrEmbedCfg.title;
+
+      const existing = messages?.find(
+        m =>
+          m.author.id === client.user.id &&
+          m.embeds?.[0]?.title === ROLE_SELECT_MESSAGE_TITLE
+      );
+
+      if (!existing) {
+        const embed = new EmbedBuilder()
+          .setTitle(rrEmbedCfg.title)
+          .setDescription(rrEmbedCfg.description)
+          .setColor(rrEmbedCfg.color || "#29AC5F");
+
+        if (rrEmbedCfg.thumbnailUrl)
+          embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
+
+        if (rrEmbedCfg.imageUrl)
+          embed.setImage(rrEmbedCfg.imageUrl);
+
+        const msg = await channel.send({ embeds: [embed] });
+
+        for (const entry of config.reactionRoles.emojiRoleMap || []) {
+          const e = entry.emoji;
+          if (!e) continue;
+          await msg.react(e).catch(err =>
+            console.warn("⚠️ Reakce se nepodařila:", e, err.message)
+          );
+        }
+
+        console.log("✅ Reaction role embed odeslán + přidány emoji");
+      } else {
+        console.log("ℹ️ Reaction role embed už existuje, přeskočeno.");
+      }
+    }
+  } catch (e) {
+    console.warn("⚠️ Init reaction roles selhal:", e.message);
+  }
+});
+
+// === 🟢 Nový člen join ===
+client.on("guildMemberAdd", async member => {
+  try {
+    if (member.user.bot) return;
+
+    const unverifiedRoleId = config.channelsAndRoles.unverifiedRoleId;
+
+    // anti-dupe join
+    if (member.roles.cache.has(unverifiedRoleId)) {
+      console.log(
+        `⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`
+      );
+      return;
+    }
+    if (withShortLock(processedJoins, member.id, 2 * 60 * 1000)) return;
+
+    // dát Unverified roli
+    await member.roles.add(unverifiedRoleId).catch(() => {});
+    console.log(`👤 ${member.user.tag} dostal roli Unverified`);
+
+    // 1) veřejný welcome embed do nazdarChannelId
+    {
+      const welcomeCfg = config.welcomeFlow.greetingEmbed;
+      const welcomeEmbedChannel = member.guild.channels.cache.get(
+        config.channelsAndRoles.nazdarChannelId
+      );
+      if (welcomeEmbedChannel) {
+        const welcomeEmbed = new EmbedBuilder()
+          .setTitle(welcomeCfg.title)
+          .setDescription(
+            fillTemplate(welcomeCfg.description, {
+              USER: `${member}`
+            })
+          )
+          .setColor(welcomeCfg.color || "#FF0000")
+          .setThumbnail(
+            member.user.displayAvatarURL({ dynamic: true })
+          );
+
+        await welcomeEmbedChannel.send({ embeds: [welcomeEmbed] });
+      }
+    }
+
+    // 2) verifikační otázka do welcomeChannelId
+    const verifyChannel = member.guild.channels.cache.get(
+      config.channelsAndRoles.welcomeChannelId
+    );
+    if (!verifyChannel) return;
+
+    const questionText = fillTemplate(
+      config.welcomeFlow.verifyQuestionText,
+      { USER: `${member}` }
+    );
+
+    const questionMsg = await verifyChannel.send(questionText);
+
+    const filter = m => m.author.id === member.id;
+    const collector = verifyChannel.createMessageCollector({
+      filter,
+      max: 1,
+      time: 86400000 // 24h
+    });
+
+    collector.on("collect", async msg => {
+      const logChannel = member.guild.channels.cache.get(
+        config.channelsAndRoles.joinLogChannelId
+      );
+      if (!logChannel) return;
+
+      const modLogCfg = config.welcomeFlow.modLogEmbed;
+
+      // embed pro mod tým
+      const embed = new EmbedBuilder()
+        .setTitle(modLogCfg.title)
+        .setDescription(
+          fillTemplate(modLogCfg.descriptionTemplate, {
+            USER: `<@${member.id}>`,
+            ANSWER: msg.content || "*Žádná odpověď*"
+          })
+        )
+        .setColor(modLogCfg.color || "#ff0000");
+
+      const logMsg = await logChannel.send({ embeds: [embed] });
+
+      await logMsg.react("✅");
+      await logMsg.react("❌");
+
+      // cleanup
+      await msg.delete().catch(() => {});
+      await questionMsg.delete().catch(() => {});
+    });
+
+    collector.on("end", async collected => {
+      if (collected.size === 0) {
+        // kick po timeoutu
+        await member
+          .kick(
+            config.welcomeFlow.timeoutKickReason ||
+              "Timeout ověření"
+          )
+          .catch(() => {});
+        console.log(
+          `⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`
+        );
+      }
+    });
+  } catch (err) {
+    console.error("❌ Chyba v guildMemberAdd:", err);
+  }
+});
+
+// === 🧩 Reaction Add ===
+client.on("messageReactionAdd", async (reaction, user) => {
+  try {
+    if (user.bot) return;
+
+    if (reaction.partial) {
+      try {
+        await reaction.fetch();
+      } catch {
+        return;
+      }
+    }
+
+    const message = reaction.message;
+    if (!message.guild) return;
+
+    const rk = `add:${message.id}:${reaction.emoji.identifier}:${user.id}`;
+    if (withShortLock(processedReactions, rk, 2000)) return;
+
+    // 1) reaction roles
+    if (
+      message.channelId ===
+      config.channelsAndRoles.roleSelectChannelId
+    ) {
+      const emojiKey = reaction.emoji.toString();
+      const EMOJI_ROLE_MAP = buildEmojiRoleMap();
+      const roleId = EMOJI_ROLE_MAP[emojiKey];
+      if (!roleId) return;
+
+      const member = await message.guild.members
+        .fetch(user.id)
+        .catch(() => null);
+      if (member) await member.roles.add(roleId).catch(() => {});
+      return;
+    }
+
+    // 2) approve / reject mod log
+    if (
+      message.channelId ===
+      config.channelsAndRoles.joinLogChannelId
+    ) {
+      const embed = message.embeds?.[0];
+      if (!embed?.title?.includes("Nový člen")) return;
+
+      const match = embed.description?.match(/<@(\d+)>/);
+      if (!match) return;
+      const memberId = match[1];
+
+      const guild = message.guild;
+      const member = await guild.members
+        .fetch(memberId)
+        .catch(() => null);
+      if (!member) return;
+
+      if (reaction.emoji.name === "✅") {
+        await member.roles
+          .add(config.channelsAndRoles.verifiedRoleId)
+          .catch(() => {});
+        await member.roles
+          .remove(config.channelsAndRoles.unverifiedRoleId)
+          .catch(() => {});
+        await message.delete().catch(() => {});
+
+        const approveCfg =
+          config.welcomeFlow.modLogEmbed.approveMessage;
+        await message.channel.send({
+          embeds: [
+            new EmbedBuilder()
+              .setDescription(
+                fillTemplate(approveCfg.textTemplate, {
+                  USER: `<@${member.id}>`,
+                  MOD: `<@${user.id}>`
+                })
+              )
+              .setColor(approveCfg.color || "#00FF00")
+          ]
+        });
+      } else if (reaction.emoji.name === "❌") {
+        await member
+          .kick(`Zamítnuto ${user.tag}`)
+          .catch(() => {});
+        await message.delete().catch(() => {});
+
+        const rejectCfg =
+          config.welcomeFlow.modLogEmbed.rejectMessage;
+        await message.channel.send({
+          embeds: [
+            new EmbedBuilder()
+              .setDescription(
+                fillTemplate(rejectCfg.textTemplate, {
+                  USER: `<@${member.id}>`,
+                  MOD: `<@${user.id}>`
+                })
+              )
+              .setColor(rejectCfg.color || "#FF0000")
+          ]
+        });
+      }
+    }
+  } catch (err) {
+    console.error("⚠️ Chyba při messageReactionAdd:", err);
+  }
+});
+
+// === 🧩 Reaction Remove ===
+client.on("messageReactionRemove", async (reaction, user) => {
+  try {
+    if (user.bot) return;
+    if (reaction.partial) {
+      try {
+        await reaction.fetch();
+      } catch {
+        return;
+      }
+    }
+    const message = reaction.message;
+    if (!message.guild) return;
+    if (
+      message.channelId !==
+      config.channelsAndRoles.roleSelectChannelId
+    )
+      return;
+
+    const emojiKey = reaction.emoji.toString();
+    const EMOJI_ROLE_MAP = buildEmojiRoleMap();
+    const roleId = EMOJI_ROLE_MAP[emojiKey];
+    if (!roleId) return;
+
+    const member = await message.guild.members
+      .fetch(user.id)
+      .catch(() => null);
+    if (member) await member.roles.remove(roleId).catch(() => {});
+  } catch (err) {
+    console.error("⚠️ Chyba při messageReactionRemove:", err);
+  }
+});
+
+// === 🔴 Leave & Ban ===
+client.on("guildMemberRemove", async member => {
+  const now = Date.now(),
+    last = lastEvent.get(member.id) || 0;
+  if (now - last < 3000) return;
+  lastEvent.set(member.id, now);
+
+  const ch = member.guild.channels.cache.get(
+    config.channelsAndRoles.leaveBanChannelId
+  );
+  if (ch) {
+    const leaveCfg = config.leaveBanLogs.leave;
+    await ch.send({
+      embeds: [
+        new EmbedBuilder()
+          .setDescription(
+            fillTemplate(leaveCfg.textTemplate, {
+              USER: `${member.user}`
+            })
+          )
+          .setColor(leaveCfg.color || "#FFD700")
+      ]
+    });
+  }
+});
+
+client.on("guildBanAdd", async ban => {
+  const now = Date.now(),
+    last = lastEvent.get(ban.user.id) || 0;
+  if (now - last < 3000) return;
+  lastEvent.set(ban.user.id, now);
+
+  const ch = ban.guild.channels.cache.get(
+    config.channelsAndRoles.leaveBanChannelId
+  );
+  if (ch) {
+    const banCfg = config.leaveBanLogs.ban;
+    await ch.send({
+      embeds: [
+        new EmbedBuilder()
+          .setDescription(
+            fillTemplate(banCfg.textTemplate, {
+              USER: `${ban.user}`
+            })
+          )
+          .setColor(banCfg.color || "#FF0000")
+      ]
+    });
+  }
+});
+
+// === 🧮 Counters ===
+let lastMemberCount = -1,
+  lastUnverifiedCount = -1;
+
+setInterval(async () => {
+  try {
+    const guild = client.guilds.cache.first();
+    if (!guild) return;
+    await guild.members.fetch();
+
+    const memberCount = guild.members.cache.filter(m => {
+      return (
+        !m.user.bot &&
+        m.id !== config.channelsAndRoles.fallenPhoenixId &&
+        !m.roles.cache.has(config.channelsAndRoles.unverifiedRoleId)
+      );
+    }).size;
+
+    if (memberCount !== lastMemberCount) {
+      const ch = guild.channels.cache.get(
+        config.channelsAndRoles.memberStatsChannelId
+      );
+      if (ch) {
+        await ch
+          .setName(`🔢︱Mᴇᴍʙᴇʀs: ${memberCount}`)
+          .catch(() => {});
+      }
+      lastMemberCount = memberCount;
+    }
+  } catch (err) {
+    console.error(
+      "⚠️ Chyba při update Members:",
+      err.message
+    );
+  }
+}, 30000);
+
+setInterval(async () => {
+  try {
+    const guild = client.guilds.cache.first();
+    if (!guild) return;
+    await guild.members.fetch();
+
+    const count = guild.members.cache.filter(m => {
+      return (
+        !m.user.bot &&
+        m.roles.cache.has(config.channelsAndRoles.unverifiedRoleId)
+      );
+    }).size;
+
+    if (count !== lastUnverifiedCount) {
+      const ch = guild.channels.cache.get(
+        config.channelsAndRoles.unverifiedStatsChannelId
+      );
+      if (ch) {
+        await ch
+          .setName(`❔︱Uɴᴠᴇʀɪғɪᴇᴅ: ${count}`)
+          .catch(() => {});
+      }
+      lastUnverifiedCount = count;
+    }
+  } catch (err) {
+    console.error(
+      "⚠️ Chyba při update Unverified:",
+      err.message
+    );
+  }
+}, 35000);
+
+// === 🧹 /clear + /ban ===
+client.on("interactionCreate", async i => {
+  if (!i.isChatInputCommand()) return;
+
+  // /clear
+  if (i.commandName === "clear") {
+    const count = i.options.getInteger("pocet");
+    if (count < 1 || count > 100) {
+      return i.reply({
+        content: "⚠️ Zadej číslo 1–100!",
+        flags: 64
+      });
+    }
+
+    try {
+      const deleted = await i.channel.bulkDelete(count, true);
+      await i.reply({
+        content: `✅ Smazáno ${deleted.size} zpráv`,
+        flags: 64
+      });
+      setTimeout(() => i.deleteReply().catch(() => {}), 1000);
+    } catch (err) {
+      if (err.code === 10008) {
+        console.log(
+          "⚠️ Některé zprávy už byly smazány dřív, přeskočeno."
+        );
+      } else {
+        console.error("❌ Chyba při mazání zpráv:", err);
+      }
+    }
+  }
+
+  // /ban
+  if (i.commandName === "ban") {
+    const userId = i.options.getString("userid");
+    const reason =
+      i.options.getString("duvod") || "Bez důvodu";
+    try {
+      const guild = i.guild;
+      await guild.bans.create(userId, { reason });
+
+      await i.reply({
+        content: `✅ Uživatel <@${userId}> byl zabanován.`,
+        flags: 64
+      });
+      setTimeout(() => i.deleteReply().catch(() => {}), 1000);
+
+      // log do onlineLogChannelId
+      const logCh = guild.channels.cache.get(
+        config.channelsAndRoles.onlineLogChannelId
+      );
+      if (logCh) {
+        const banLogCfg = config.banCommandLog;
+        const embed = new EmbedBuilder()
+          .setTitle(banLogCfg.title)
+          .setDescription(
+            fillTemplate(banLogCfg.descriptionTemplate, {
+              USER: `<@${userId}>`,
+              USER_ID: userId,
+              MOD: `<@${i.user.id}>`,
+              REASON: reason
+            })
+          )
+          .setColor(banLogCfg.color || "#FF0000");
+
+        await logCh.send({ embeds: [embed] });
+      }
+    } catch (err) {
+      console.error("❌ Chyba při /ban:", err);
+      await i.reply({
+        content: `⚠️ Nepodařilo se zabanovat uživatele s ID ${userId}`,
+        flags: 64
+      });
+      setTimeout(() => i.deleteReply().catch(() => {}), 2000);
+    }
+  }
+});
+
+// === 💤 Keepalive ping co 5 minut ===
 setInterval(() => {
   fetch("https://discord-bot-i4hx.onrender.com")
     .then(() => console.log("💓 Keepalive ping"))
-    .catch(e => console.error("⚠️ Keepalive error:", e.message));
+    .catch(e =>
+      console.error("⚠️ Keepalive error:", e.message)
+    );
 }, 5 * 60 * 1000);
 
+// === Přihlášení bota ===
 client.login(process.env.BOT_TOKEN);

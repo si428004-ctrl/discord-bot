@@ -1199,13 +1199,34 @@
     });
 
     function uploadAvatar(){
-      const file = avatarInput.files[0];
-      if (!file) {
-        alert("Nejdřív vyber obrázek 💀");
-        return;
-      }
-      alert("zatím mock -> /upload-avatar ještě není hotovej");
+  const file = avatarInput.files[0];
+  if (!file) {
+    alert("Nejdřív vyber obrázek 💀");
+    return;
+  }
+
+  const formData = new FormData();
+  // "avatarFile" se MUSÍ jmenovat stejně jako upload.single("avatarFile") v index.js
+  formData.append("avatarFile", file);
+
+  fetch("/upload-avatar", {
+    method: "POST",
+    body: formData
+  })
+  .then(r => r.json())
+  .then(resp => {
+    if (resp.ok) {
+      alert("✅ Avatar změněn!");
+      loadInitial(); // refreshneme preview
+    } else {
+      alert("❌ Avatar se nepodařilo změnit: " + (resp.error || "neznámá chyba"));
     }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("❌ Nepovedlo se spojit se serverem (/upload-avatar).");
+  });
+}
 
     // Deploy / reload tlačítka
     function doReloadConfig(){
@@ -1226,8 +1247,31 @@
     }
 
     function publishChanges(){
-      alert("zatím mock -> publish (git push) časem");
+  const secret = prompt("Zadej publish heslo (secret):");
+  if (!secret) {
+    alert("Publish zrušen 😔");
+    return;
+  }
+
+  fetch("/publish", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ secret })
+  })
+  .then(r => r.json())
+  .then(resp => {
+    if (resp.ok) {
+      alert("🚀 Hotovo: config.json commitnutej & pushnutej na repo.\n" +
+            "Render by si to měl při dalším redeployi natáhnout.");
+    } else {
+      alert("❌ Publish fail: " + (resp.error || "neznámá chyba"));
     }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("❌ Nepovedlo se spojit se serverem (/publish).");
+  });
+}
 
     // init page load
     loadInitial();
