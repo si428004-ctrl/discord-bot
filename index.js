@@ -42,7 +42,7 @@ const client = new Client({
   ]
 });
 
-// --- 🧠 Anti-dupe zámky / helpery (musí být definované před použitím v eventech) --- //
+// --- 🧠 Anti-dupe zámky / helpery --- //
 const processedJoins = new Set();
 const processedReactions = new Set();
 const lastEvent = new Map();
@@ -54,7 +54,7 @@ function withShortLock(set, key, ttlMs) {
   return false;
 }
 
-// postaví mapu emoji -> roleId z configu.reactionRoles.emojiRoleMap
+// postaví mapu emoji -> roleId z config.reactionRoles.emojiRoleMap
 function buildEmojiRoleMap() {
   const map = {};
   for (const entry of (config.reactionRoles?.emojiRoleMap || [])) {
@@ -76,6 +76,86 @@ function fillTemplate(str, vars) {
     .replace(/\{USER_ID\}/g, vars.USER_ID ?? "");
 }
 
+// --- 🧲 Sync reaction-role embed zprávy v kanálu --- //
+async function syncReactionRoleMessage() {
+  try {
+    const channelId = config.channelsAndRoles?.roleSelectChannelId;
+    if (!channelId) {
+      console.warn("⚠️ syncReactionRoleMessage: chybí roleSelectChannelId");
+      return;
+    }
+
+    // zkus najít kanál
+    const channel = await client.channels.fetch(channelId).catch(() => null);
+    if (!channel) {
+      console.warn("⚠️ syncReactionRoleMessage: channel nenalezen");
+      return;
+    }
+
+    // config pro embed
+    const rrEmbedCfg = config.reactionRoles?.embed;
+    if (!rrEmbedCfg) {
+      console.warn("⚠️ syncReactionRoleMessage: chybí reactionRoles.embed v configu");
+      return;
+    }
+
+    // stáhnem posledních pár zpráv v kanálu
+    const recentMessages = await channel.messages.fetch({ limit: 10 }).catch(() => null);
+
+    // snažíme se najít, jestli už tam NÁŠ embed existuje: autor = náš bot, stejný title
+    const existing = recentMessages?.find(
+      m =>
+        m.author.id === client.user.id &&
+        m.embeds?.[0]?.title === rrEmbedCfg.title
+    );
+
+    // postav nový embed podle configu
+    const embed = new EmbedBuilder()
+      .setTitle(rrEmbedCfg.title || "Role výběr")
+      .setDescription(rrEmbedCfg.description || "")
+      .setColor(rrEmbedCfg.color || "#29AC5F");
+
+    if (rrEmbedCfg.thumbnailUrl) {
+      embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
+    }
+    if (rrEmbedCfg.imageUrl) {
+      embed.setImage(rrEmbedCfg.imageUrl);
+    }
+
+    if (existing) {
+      // zpráva už tam je -> jen ji editnem aby měla novej text/barvu/obr
+      await existing.edit({ embeds: [embed] }).catch(err => {
+        console.warn("⚠️ syncReactionRoleMessage: nemůžu editnout message:", err.message);
+      });
+
+      // a zkusíme přidat emoji z configu (když přibyly nový)
+      for (const entry of config.reactionRoles.emojiRoleMap || []) {
+        const e = entry.emoji;
+        if (!e) continue;
+        existing.react(e).catch(() => {});
+      }
+
+      console.log("🔁 Reaction role embed aktualizován (edit).");
+    } else {
+      // žádná naše zpráva → pošleme novou
+      const sent = await channel.send({ embeds: [embed] });
+
+      // přidáme všechny emoji/reakce z configu
+      for (const entry of config.reactionRoles.emojiRoleMap || []) {
+        const e = entry.emoji;
+        if (!e) continue;
+        await sent.react(e).catch(err => {
+          console.warn("⚠️ Reakce se nepodařila:", e, err.message);
+        });
+      }
+
+      console.log("✅ Reaction role embed poslán + emoji přidány.");
+    }
+  } catch (err) {
+    console.warn("⚠️ syncReactionRoleMessage fail:", err.message);
+  }
+}
+
 // --- 🔁 Reload configu + update identity bota --- //
 function reloadConfig() {
   try {
@@ -86,15 +166,10 @@ function reloadConfig() {
       client.user
         .setUsername(config.botIdentity.displayName)
         .then(() =>
-          console.log(
-            `💫 Bot přejmenován na: ${config.botIdentity.displayName}`
-          )
+          console.log(`💫 Bot přejmenován na: ${config.botIdentity.displayName}`)
         )
         .catch(err =>
-          console.warn(
-            "⚠️ Nepodařilo se změnit jméno bota:",
-            err.message
-          )
+          console.warn("⚠️ Nepodařilo se změnit jméno bota:", err.message)
         );
     }
 
@@ -103,9 +178,7 @@ function reloadConfig() {
         activities: [{ name: config.botIdentity.statusText }],
         status: "online"
       });
-      console.log(
-        `💬 Status bota nastaven na: ${config.botIdentity.statusText}`
-      );
+      console.log(`💬 Status bota nastaven na: ${config.botIdentity.statusText}`);
     }
   } catch (err) {
     console.error("❌ Chyba při reloadu configu:", err.message);
@@ -116,7 +189,6 @@ function reloadConfig() {
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// umíme číst JSON body a file upload
 app.use(express.json());
 
 // --- 🔒 Basic auth middleware --- //
@@ -154,7 +226,7 @@ function requireAdminAuth(req, res, next) {
 // --- ✅ Healthcheck (veřejné kvůli Renderu) --- //
 app.get("/", (req, res) => res.send("✅ Bot is running!"));
 
-// --- 🧩 GET /config – dashboard si tím načítá current state --- //
+// --- 🧩 GET /config – dashboard načte aktuální stav --- //
 app.get("/config", requireAdminAuth, (req, res) => {
   try {
     const raw = fs.readFileSync("./config.json", "utf8");
@@ -167,13 +239,9 @@ app.get("/config", requireAdminAuth, (req, res) => {
 });
 
 // --- 💾 POST /save-welcome --- //
-// tahle route přepíše jednotlivý části welcomeFlow
 app.post("/save-welcome", requireAdminAuth, (req, res) => {
   try {
     const incoming = req.body;
-
-    // bezpečně přepíšeme díly welcomeFlow tak,
-    // aby struktura (greetingEmbed / modLogEmbed / approveMessage / rejectMessage) zůstala
     if (!config.welcomeFlow) config.welcomeFlow = {};
 
     // greetingEmbed
@@ -226,9 +294,7 @@ app.post("/save-welcome", requireAdminAuth, (req, res) => {
 
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
 
-    // aktualizuj bota (status/jméno apod. pokud by se tam někdy propsalo)
     reloadConfig();
-
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ /save-welcome error:", err);
@@ -241,9 +307,7 @@ app.post("/save-botsettings", requireAdminAuth, (req, res) => {
   try {
     const { displayName, statusText } = req.body;
     if (!displayName || !displayName.trim()) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "Missing displayName" });
+      return res.status(400).json({ ok: false, error: "Missing displayName" });
     }
 
     if (!config.botIdentity) config.botIdentity = {};
@@ -252,7 +316,7 @@ app.post("/save-botsettings", requireAdminAuth, (req, res) => {
 
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
 
-    reloadConfig(); // tohle nastaví username + presence
+    reloadConfig(); // nastaví username + presence
 
     res.json({ ok: true });
   } catch (err) {
@@ -269,9 +333,7 @@ app.post(
   async (req, res) => {
     try {
       if (!req.file) {
-        return res
-          .status(400)
-          .json({ ok: false, error: "Chybí soubor." });
+        return res.status(400).json({ ok: false, error: "Chybí soubor." });
       }
 
       if (!client?.user) {
@@ -285,7 +347,7 @@ app.post(
       await client.user.setAvatar(buffer);
       console.log("🖼 Avatar bota aktualizován.");
 
-      // uložíme preview, aby dashboard viděl novej avatar i bez refreshnutí Discordu
+      // preview do configu
       const base64 = `data:${req.file.mimetype};base64,${buffer.toString(
         "base64"
       )}`;
@@ -303,16 +365,13 @@ app.post(
 // --- 💾 POST /save-ids --- //
 app.post("/save-ids", requireAdminAuth, (req, res) => {
   try {
-    // uložíme nové IDčka do configu v paměti
     config.channelsAndRoles = req.body;
 
-    // přepíšeme config.json na disku
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
 
-    // 🔥 přenačteme config do bota, ať se změny projeví hned
+    // přenačteme config do bota (hlavně kvůli statusu/jménu, ale ať je to konzistentní)
     reloadConfig();
 
-    // hotovo
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ /save-ids error:", err);
@@ -321,16 +380,16 @@ app.post("/save-ids", requireAdminAuth, (req, res) => {
 });
 
 // --- 💾 POST /save-reactionroles --- //
-app.post("/save-reactionroles", requireAdminAuth, (req, res) => {
+app.post("/save-reactionroles", requireAdminAuth, async (req, res) => {
   try {
-    // uložíme nový embed + emojiRoleMap
     config.reactionRoles = req.body;
 
-    // zapíšeme na disk
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
 
-    // 💥 Tohle je důležitý: propsat nový config do běžící instance bota
     reloadConfig();
+
+    // 💥 hned po uložení syncni message v kanálu
+    await syncReactionRoleMessage();
 
     res.json({ ok: true });
   } catch (err) {
@@ -374,7 +433,6 @@ app.post("/publish", requireAdminAuth, (req, res) => {
   try {
     const { secret } = req.body;
 
-    // druhá vrstva ochrany = secret ve promptu z dashboardu
     if (!secret || secret !== process.env.PUBLISH_SECRET) {
       console.warn("❌ /publish odmítnuto: špatný secret");
       return res.status(403).json({ ok: false, error: "Invalid secret" });
@@ -481,58 +539,8 @@ client.once("ready", async () => {
   );
   console.log("✅ Slash commands /clear a /ban zaregistrovány.");
 
-  // Reaction Roles – po startu zkontroluj, jestli embed existuje, když ne, pošli ho a přidej emoji
-  try {
-    const channel = await client.channels
-      .fetch(config.channelsAndRoles.roleSelectChannelId)
-      .catch(() => null);
-
-    if (!channel) {
-      console.warn("⚠️ Reaction role kanál nenalezen");
-    } else {
-      const guild = client.guilds.cache.first();
-      if (guild) await guild.emojis.fetch().catch(() => {});
-      const messages = await channel.messages.fetch({ limit: 10 }).catch(() => null);
-
-      const rrEmbedCfg = config.reactionRoles.embed;
-      const ROLE_SELECT_MESSAGE_TITLE = rrEmbedCfg.title;
-
-      const existing = messages?.find(
-        m =>
-          m.author.id === client.user.id &&
-          m.embeds?.[0]?.title === ROLE_SELECT_MESSAGE_TITLE
-      );
-
-      if (!existing) {
-        const embed = new EmbedBuilder()
-          .setTitle(rrEmbedCfg.title)
-          .setDescription(rrEmbedCfg.description)
-          .setColor(rrEmbedCfg.color || "#29AC5F");
-
-        if (rrEmbedCfg.thumbnailUrl)
-          embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
-
-        if (rrEmbedCfg.imageUrl)
-          embed.setImage(rrEmbedCfg.imageUrl);
-
-        const msg = await channel.send({ embeds: [embed] });
-
-        for (const entry of config.reactionRoles.emojiRoleMap || []) {
-          const e = entry.emoji;
-          if (!e) continue;
-          await msg.react(e).catch(err =>
-            console.warn("⚠️ Reakce se nepodařila:", e, err.message)
-          );
-        }
-
-        console.log("✅ Reaction role embed odeslán + přidány emoji");
-      } else {
-        console.log("ℹ️ Reaction role embed už existuje, přeskočeno.");
-      }
-    }
-  } catch (e) {
-    console.warn("⚠️ Init reaction roles selhal:", e.message);
-  }
+  // 🔁 Syncni / refreshni reaction role embed teď při startu
+  await syncReactionRoleMessage();
 });
 
 // === 🟢 Nový člen join ===
@@ -864,10 +872,7 @@ setInterval(async () => {
       lastMemberCount = memberCount;
     }
   } catch (err) {
-    console.error(
-      "⚠️ Chyba při update Members:",
-      err.message
-    );
+    console.error("⚠️ Chyba při update Members:", err.message);
   }
 }, 30000);
 
@@ -896,14 +901,11 @@ setInterval(async () => {
       lastUnverifiedCount = count;
     }
   } catch (err) {
-    console.error(
-      "⚠️ Chyba při update Unverified:",
-      err.message
-    );
+    console.error("⚠️ Chyba při update Unverified:", err.message);
   }
 }, 35000);
 
-// === 🧹 /clear + /ban ===
+// === /clear + /ban ===
 client.on("interactionCreate", async i => {
   if (!i.isChatInputCommand()) return;
 
@@ -926,9 +928,7 @@ client.on("interactionCreate", async i => {
       setTimeout(() => i.deleteReply().catch(() => {}), 1000);
     } catch (err) {
       if (err.code === 10008) {
-        console.log(
-          "⚠️ Některé zprávy už byly smazány dřív, přeskočeno."
-        );
+        console.log("⚠️ Některé zprávy už byly smazány dřív, přeskočeno.");
       } else {
         console.error("❌ Chyba při mazání zpráv:", err);
       }
@@ -938,8 +938,7 @@ client.on("interactionCreate", async i => {
   // /ban
   if (i.commandName === "ban") {
     const userId = i.options.getString("userid");
-    const reason =
-      i.options.getString("duvod") || "Bez důvodu";
+    const reason = i.options.getString("duvod") || "Bez důvodu";
     try {
       const guild = i.guild;
       await guild.bans.create(userId, { reason });
@@ -985,9 +984,7 @@ client.on("interactionCreate", async i => {
 setInterval(() => {
   fetch("https://discord-bot-i4hx.onrender.com")
     .then(() => console.log("💓 Keepalive ping"))
-    .catch(e =>
-      console.error("⚠️ Keepalive error:", e.message)
-    );
+    .catch(e => console.error("⚠️ Keepalive error:", e.message));
 }, 5 * 60 * 1000);
 
 // === Přihlášení bota ===
