@@ -98,6 +98,12 @@
       transform: scale(.98);
     }
 
+    .btn.small {
+      font-size: .7rem;
+      padding: 8px 10px;
+      line-height: 1.1;
+    }
+
     /* cards */
     .card {
       background: var(--bg-card);
@@ -211,50 +217,49 @@
     }
 
     /* reaction roles layout tweak */
-.reaction-row {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr 0.8fr auto;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: .8rem;
-  margin-bottom: 8px;
-  /* ten margin-bottom nám udělá mezeru nad hintem pod řádkem */
-}
+    .reaction-row {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr 0.8fr auto;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: .8rem;
+      margin-bottom: 8px;
+    }
 
-.reaction-row .emoji-box {
-  display: flex;
-  align-items: center;
-  background: var(--input-bg);
-  border: 1px solid var(--border-col);
-  border-radius: var(--radius-lg);
-  min-height: 36px;
-  padding: 8px 10px;
-  font-size: .75rem;
-  line-height: 1.2;
-  cursor: text;
-  color: #fff;
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
+    .reaction-row .emoji-box {
+      display: flex;
+      align-items: center;
+      background: var(--input-bg);
+      border: 1px solid var(--border-col);
+      border-radius: var(--radius-lg);
+      min-height: 36px;
+      padding: 8px 10px;
+      font-size: .75rem;
+      line-height: 1.2;
+      cursor: text;
+      color: #fff;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
 
-.reaction-row input.txt {
-  width: 100%;
-  min-width: 0;
-  padding: 8px 10px;
-  font-size: .75rem;
-  line-height: 1.2;
-}
+    .reaction-row input.txt {
+      width: 100%;
+      min-width: 0;
+      padding: 8px 10px;
+      font-size: .75rem;
+      line-height: 1.2;
+    }
 
-.reaction-hint {
-  grid-column: 1 / -1;
-  font-size: .7rem;
-  color: var(--txt-dim);
-  line-height: 1.3;
-  margin-top: -4px;
-  margin-bottom: 16px;
-}
+    .reaction-hint {
+      grid-column: 1 / -1;
+      font-size: .7rem;
+      color: var(--txt-dim);
+      line-height: 1.3;
+      margin-top: -4px;
+      margin-bottom: 16px;
+    }
 
     .avatar-card {
       text-align: center;
@@ -296,45 +301,43 @@
       }
     }
 
-/* rozdělená dvousloupcová sekce pro leave/ban card */
-.split-2 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(320px,100%),1fr));
-  gap: 16px;
-}
+    /* rozdělená dvousloupcová sekce pro leave/ban card */
+    .split-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(320px,100%),1fr));
+      gap: 16px;
+    }
 
-/* taková "mini-card" uvnitř pro LEAVE a pro BAN */
-.subcard-block {
-  background: var(--bg-card-alt);
-  border: 1px solid var(--border-col);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  font-size: .8rem;
-}
+    /* taková "mini-card" uvnitř pro LEAVE a pro BAN */
+    .subcard-block {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border-col);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: .8rem;
+    }
 
-/* řádky uvnitř těch sub bloků (text + barva vedle sebe apod.) */
-.subcard-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-start;
-}
+    /* řádky uvnitř těch sub bloků (text + barva vedle sebe apod.) */
+    .subcard-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-start;
+    }
 
-.subcard-row .field {
-  flex: 1;
-  min-width: 0;
-}
+    .subcard-row .field {
+      flex: 1;
+      min-width: 0;
+    }
 
-.subcard-row .field.color-field {
-  flex: 0 0 auto;
-  width: 70px;
-  min-width: 70px;
-}
-
-
+    .subcard-row .field.color-field {
+      flex: 0 0 auto;
+      width: 70px;
+      min-width: 70px;
+    }
   </style>
 </head>
 <body>
@@ -352,7 +355,7 @@
       </div>
 
       <div class="top-actions">
-        <button class="btn sec" onclick="reloadConfig()">Reload config v botovi</button>
+        <button class="btn sec" onclick="doReloadConfig()">Reload config v botovi</button>
         <button class="btn" onclick="publishChanges()">Publish (git push)</button>
       </div>
     </header>
@@ -491,7 +494,7 @@
             <h2>Uvítací zpráva a ověření nováčků</h2>
             <div class="desc">
               1) Veřejný uvítací embed (“N A Z D A R !”)
-              2) DM styl otázky v kanálu pro ověření
+              2) Otázka v kanálu pro ověření
               3) Embed pro moderátory s odpovědí nováčka + approve/deny texty
             </div>
           </div>
@@ -635,58 +638,57 @@
       </section>
 
       <!-- LEAVE / BAN LOG TEXTY -->
-<section class="card" id="leaveBanCard">
-  <div class="card-header">
-    <div class="left">
-      <div class="label">Odchody & Ban notifikace</div>
-      <h2>Log zprávy při leavu a banu</h2>
-      <div class="desc">
-        Když někdo odejde nebo dostane ban, bot to napíše do
-        kanálu Leave/Ban log. Tady si přepíšeš text a barvu.
-      </div>
-    </div>
-  </div>
-
-  <!-- nový layout: dva sloupce vedle sebe -->
-  <div class="split-2">
-    <!-- LEFT = ODCHOD -->
-    <div class="subcard-block">
-      <div class="field">
-        <label>Odchod: Text</label>
-        <textarea id="leaveText" class="txt" placeholder="{USER} opustil server."></textarea>
-        <div class="hint">{USER} = ten co leavnul</div>
-      </div>
-
-      <div class="subcard-row">
-        <div class="field color-field">
-          <label>Odchod: Barva</label>
-          <input id="leaveColor" class="color" type="color" />
+      <section class="card" id="leaveBanCard">
+        <div class="card-header">
+          <div class="left">
+            <div class="label">Odchody & Ban notifikace</div>
+            <h2>Log zprávy při leavu a banu</h2>
+            <div class="desc">
+              Když někdo odejde nebo dostane ban, bot to napíše do
+              kanálu Leave/Ban log. Tady si přepíšeš text a barvu.
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- RIGHT = BAN -->
-    <div class="subcard-block">
-      <div class="field">
-        <label>Ban: Text</label>
-        <textarea id="banText" class="txt" placeholder="{USER} dostal BAN!"></textarea>
-        <div class="hint">{USER} = ten zabanovanej</div>
-      </div>
+        <div class="split-2">
+          <!-- LEFT = ODCHOD -->
+          <div class="subcard-block">
+            <div class="field">
+              <label>Odchod: Text</label>
+              <textarea id="leaveText" class="txt" placeholder="{USER} opustil server."></textarea>
+              <div class="hint">{USER} = ten co leavnul</div>
+            </div>
 
-      <div class="subcard-row">
-        <div class="field color-field">
-          <label>Ban: Barva</label>
-          <input id="banColor" class="color" type="color" />
+            <div class="subcard-row">
+              <div class="field color-field">
+                <label>Odchod: Barva</label>
+                <input id="leaveColor" class="color" type="color" />
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT = BAN -->
+          <div class="subcard-block">
+            <div class="field">
+              <label>Ban: Text</label>
+              <textarea id="banText" class="txt" placeholder="{USER} dostal BAN!"></textarea>
+              <div class="hint">{USER} = ten zabanovanej</div>
+            </div>
+
+            <div class="subcard-row">
+              <div class="field color-field">
+                <label>Ban: Barva</label>
+                <input id="banColor" class="color" type="color" />
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <div class="footer-actions">
-    <button class="btn sec" onclick="resetLeaveBan()">Zrušit změny</button>
-    <button class="btn" onclick="saveLeaveBan()">Uložit</button>
-  </div>
-</section>
+        <div class="footer-actions">
+          <button class="btn sec" onclick="resetLeaveBan()">Zrušit změny</button>
+          <button class="btn" onclick="saveLeaveBan()">Uložit</button>
+        </div>
+      </section>
 
     </main>
 
@@ -731,7 +733,7 @@
           <div class="field">
             <label>Akce</label>
             <div class="field-row" style="flex-wrap:wrap;gap:8px;">
-              <button class="btn sec" onclick="reloadConfig()">Reload config v botovi</button>
+              <button class="btn sec" onclick="doReloadConfig()">Reload config v botovi</button>
               <button class="btn" onclick="publishChanges()">Publish (git push)</button>
             </div>
             <div class="hint">Publish = commitne config.json zpátky do repa a Render pak udělá redeploy.</div>
@@ -743,282 +745,153 @@
   </div>
 
   <script>
-    // mock data = tohle by normálně bylo GET /config
-    const state = {
-      botIdentity: {
-        displayName: "Fallen Phoenix",
-        statusText: "🔥 Ready to burn"
-      },
-      channelsAndRoles: {
-        guildId: "1400568910176194600",
-        welcomeChannelId: "1428862251162403019",
-        joinLogChannelId: "1428864324474114141",
-        verifiedRoleId: "1428624557635407902",
-        unverifiedRoleId: "1428863230217945198",
-        roleSelectChannelId: "1409197870518636554",
-        leaveBanChannelId: "1428817792991363103",
-        memberStatsChannelId: "1429158078980423913",
-        unverifiedStatsChannelId: "1429189687288926379",
-        fallenPhoenixId: "1428857086304850051",
-        nazdarChannelId: "1400569915437748254",
-        onlineLogChannelId: "1421633740689506405"
-      },
-      welcomeFlow: {
-        greetingEmbed: {
-          title: "N A Z D A R !",
-          description: "Vítej {USER}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!",
-          color: "#FF0000"
-        },
-        verifyQuestionText: "Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?",
-        modLogEmbed: {
-          title: "🆕 Nový člen na serveru",
-          descriptionTemplate: "👤 **Uživatel:** {USER}\n📝 **Odpověď:**\n\n{ANSWER}",
-          color: "#FF0000",
-          approveMessage: {
-            textTemplate: "{USER} byl schválen uživatelem {MOD} ✅",
-            color: "#00FF00"
-          },
-          rejectMessage: {
-            textTemplate: "{USER} byl odmítnut uživatelem {MOD} ❌",
-            color: "#FF0000"
-          }
-        },
-        timeoutKickReason: "Neodpověděl na uvítací otázku během 24 hodin"
-      },
-      reactionRoles: {
-        embed: {
-          title: "Jakou linku mainíš?",
-          description: "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!",
-          color: "#29AC5F",
-          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png",
-          imageUrl: "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
-        },
-        emojiRoleMap: [
-          {
-            emoji: "<:adc:1423344369523495023>",
-            roleId: "1423292319150506066",
-            label: "ADC"
-          },
-          {
-            emoji: "<:top_:1423344343527198790>",
-            roleId: "1423293095319048202",
-            label: "TOP"
-          },
-          {
-            emoji: "<:support:1423344317979951256>",
-            roleId: "1423292503112814662",
-            label: "SUPPORT"
-          },
-          {
-            emoji: "<:jgl:1423344292407279647>",
-            roleId: "1423292924925575280",
-            label: "JUNGLE"
-          },
-          {
-            emoji: "<:mid:1423344256076091402>",
-            roleId: "1423292659572674570",
-            label: "MID"
-          }
-        ]
-      },
-      leaveBanLogs: {
-        leave: {
-          textTemplate: "{USER} opustil server.",
-          color: "#FFD700"
-        },
-        ban: {
-          textTemplate: "{USER} dostal BAN!",
-          color: "#FF0000"
+    // Globální stav stránky naplněný z /config
+    let state = {};
+
+    // === FETCH CONFIG + NAPLNĚNÍ FORMŮ ===
+    async function loadInitial() {
+      try {
+        const res = await fetch("/config");
+        if (!res.ok) throw new Error("Fetch /config selhal");
+        state = await res.json();
+
+        // Helpery, aby to necrashlo když nějakej input není
+        const setVal = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val ?? "";
+        };
+        const setColor = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val ?? "#000000";
+        };
+        const setBgImage = (id, url) => {
+          const el = document.getElementById(id);
+          if (el && url) el.style.backgroundImage = `url('${url}')`;
+        };
+
+        // BOT IDENTITY
+        if (state.botIdentity) {
+          setVal('botDisplayName', state.botIdentity.displayName);
+          setVal('botStatus', state.botIdentity.statusText);
         }
-      },
-      banCommandLog: {
-        title: "🚫 BAN",
-        descriptionTemplate: "**User:** {USER} ({USER_ID})\n**Banned by:** {MOD}\n**Reason:** {REASON}",
-        color: "#FF0000"
-      },
-      avatarPreviewUrl: "https://placehold.co/160x160/png"
-    };
 
-let state = {}; // bude tu globální objekt pro všechny data
+        // IDS / CHANNELS / ROLES
+        if (state.channelsAndRoles) {
+          setVal('guildId', state.channelsAndRoles.guildId);
+          setVal('welcomeChannelId', state.channelsAndRoles.welcomeChannelId);
+          setVal('joinLogChannelId', state.channelsAndRoles.joinLogChannelId);
+          setVal('roleSelectChannelId', state.channelsAndRoles.roleSelectChannelId);
+          setVal('nazdarChannelId', state.channelsAndRoles.nazdarChannelId);
+          setVal('leaveBanChannelId', state.channelsAndRoles.leaveBanChannelId);
+          setVal('onlineLogChannelId', state.channelsAndRoles.onlineLogChannelId);
+          setVal('memberStatsChannelId', state.channelsAndRoles.memberStatsChannelId);
+          setVal('unverifiedStatsChannelId', state.channelsAndRoles.unverifiedStatsChannelId);
+          setVal('verifiedRoleId', state.channelsAndRoles.verifiedRoleId);
+          setVal('unverifiedRoleId', state.channelsAndRoles.unverifiedRoleId);
+          setVal('fallenPhoenixId', state.channelsAndRoles.fallenPhoenixId);
+        }
 
-async function loadInitial() {
-  try {
-    const res = await fetch("/config");
-    if (!res.ok) throw new Error("Fetch /config selhal");
-    state = await res.json();
+        // WELCOME / VERIFY FLOW
+        if (state.welcomeFlow) {
+          const wf = state.welcomeFlow;
+          if (wf.greetingEmbed) {
+            setVal('welcomeTitle', wf.greetingEmbed.title);
+            setColor('welcomeColor', wf.greetingEmbed.color);
+            setVal('welcomeDesc', wf.greetingEmbed.description);
+          }
+          setVal('verifyQuestionText', wf.verifyQuestionText);
+          setVal('timeoutKickReason', wf.timeoutKickReason);
 
-    // BOT IDENTITY
-    document.getElementById('botDisplayName').value = state.botIdentity.displayName;
-    document.getElementById('botStatus').value = state.botIdentity.statusText;
+          if (wf.modLogEmbed) {
+            setVal('modLogTitle', wf.modLogEmbed.title);
+            setColor('modLogColor', wf.modLogEmbed.color);
+            setVal('modLogDescription', wf.modLogEmbed.descriptionTemplate);
 
-    // IDS / CHANNELS / ROLES
-    document.getElementById('guildId').value = state.channelsAndRoles.guildId;
-    document.getElementById('welcomeChannelId').value = state.channelsAndRoles.welcomeChannelId;
-    document.getElementById('joinLogChannelId').value = state.channelsAndRoles.joinLogChannelId;
-    document.getElementById('roleSelectChannelId').value = state.channelsAndRoles.roleSelectChannelId;
-    document.getElementById('nazdarChannelId').value = state.channelsAndRoles.nazdarChannelId;
-    document.getElementById('leaveBanChannelId').value = state.channelsAndRoles.leaveBanChannelId;
-    document.getElementById('onlineLogChannelId').value = state.channelsAndRoles.onlineLogChannelId;
-    document.getElementById('memberStatsChannelId').value = state.channelsAndRoles.memberStatsChannelId;
-    document.getElementById('unverifiedStatsChannelId').value = state.channelsAndRoles.unverifiedStatsChannelId;
-    document.getElementById('verifiedRoleId').value = state.channelsAndRoles.verifiedRoleId;
-    document.getElementById('unverifiedRoleId').value = state.channelsAndRoles.unverifiedRoleId;
-    document.getElementById('fallenPhoenixId').value = state.channelsAndRoles.fallenPhoenixId;
+            if (wf.modLogEmbed.approveMessage) {
+              setVal('approveText', wf.modLogEmbed.approveMessage.textTemplate);
+              setColor('approveColor', wf.modLogEmbed.approveMessage.color);
+            }
+            if (wf.modLogEmbed.rejectMessage) {
+              setVal('rejectText', wf.modLogEmbed.rejectMessage.textTemplate);
+              setColor('rejectColor', wf.modLogEmbed.rejectMessage.color);
+            }
+          }
+        }
 
-    // WELCOME / VERIFY FLOW
-    document.getElementById('welcomeTitle').value = state.welcomeFlow.greetingEmbed.title;
-    document.getElementById('welcomeColor').value = state.welcomeFlow.greetingEmbed.color;
-    document.getElementById('welcomeDesc').value = state.welcomeFlow.greetingEmbed.description;
-    document.getElementById('verifyQuestionText').value = state.welcomeFlow.verifyQuestionText;
-    document.getElementById('timeoutKickReason').value = state.welcomeFlow.timeoutKickReason;
+        // REACTION ROLES
+        if (state.reactionRoles) {
+          if (state.reactionRoles.embed) {
+            setVal('rrTitle', state.reactionRoles.embed.title);
+            setColor('rrColor', state.reactionRoles.embed.color);
+            setVal('rrDescription', state.reactionRoles.embed.description);
+            setVal('rrThumb', state.reactionRoles.embed.thumbnailUrl);
+            setVal('rrImage', state.reactionRoles.embed.imageUrl);
+          }
 
-    document.getElementById('modLogTitle').value = state.welcomeFlow.modLogEmbed.title;
-    document.getElementById('modLogColor').value = state.welcomeFlow.modLogEmbed.color;
-    document.getElementById('modLogDescription').value = state.welcomeFlow.modLogEmbed.descriptionTemplate;
+          renderReactionList();
+        }
 
-    document.getElementById('approveText').value = state.welcomeFlow.modLogEmbed.approveMessage.textTemplate;
-    document.getElementById('approveColor').value = state.welcomeFlow.modLogEmbed.approveMessage.color;
+        // LEAVE/BAN LOG
+        if (state.leaveBanLogs) {
+          if (state.leaveBanLogs.leave) {
+            setVal('leaveText', state.leaveBanLogs.leave.textTemplate);
+            setColor('leaveColor', state.leaveBanLogs.leave.color);
+          }
+          if (state.leaveBanLogs.ban) {
+            setVal('banText', state.leaveBanLogs.ban.textTemplate);
+            setColor('banColor', state.leaveBanLogs.ban.color);
+          }
+        }
 
-    document.getElementById('rejectText').value = state.welcomeFlow.modLogEmbed.rejectMessage.textTemplate;
-    document.getElementById('rejectColor').value = state.welcomeFlow.modLogEmbed.rejectMessage.color;
+        // BAN COMMAND LOG (log /ban do onlineLogChannelId)
+        if (state.banCommandLog) {
+          setVal('banLogTitle', state.banCommandLog.title);
+          setColor('banLogColor', state.banCommandLog.color);
+          setVal('banLogDesc', state.banCommandLog.descriptionTemplate);
+        }
 
-    // REACTION ROLES
-    document.getElementById('rrTitle').value = state.reactionRoles.embed.title;
-    document.getElementById('rrColor').value = state.reactionRoles.embed.color;
-    document.getElementById('rrDescription').value = state.reactionRoles.embed.description;
-    document.getElementById('rrThumb').value = state.reactionRoles.embed.thumbnailUrl;
-    document.getElementById('rrImage').value = state.reactionRoles.embed.imageUrl;
-    renderReactionList();
+        // AVATAR PREVIEW
+        setBgImage('avatarPreview', state.avatarPreviewUrl || "https://placehold.co/160x160/png");
 
-    // LEAVE/BAN LOG
-    document.getElementById('leaveText').value = state.leaveBanLogs.leave.textTemplate;
-    document.getElementById('leaveColor').value = state.leaveBanLogs.leave.color;
-    document.getElementById('banText').value = state.leaveBanLogs.ban.textTemplate;
-    document.getElementById('banColor').value = state.leaveBanLogs.ban.color;
-
-    // /BAN LOG
-    document.getElementById('banLogTitle').value = state.banCommandLog.title;
-    document.getElementById('banLogColor').value = state.banCommandLog.color;
-    document.getElementById('banLogDesc').value = state.banCommandLog.descriptionTemplate;
-
-    // AVATAR PREVIEW
-    document.getElementById('avatarPreview').style.backgroundImage =
-      `url('${state.avatarPreviewUrl}')`;
-
-    console.log("✅ Dashboard naplněn z config.json");
-  } catch (err) {
-    console.error("❌ Nepodařilo se načíst config:", err);
-    alert("Nepodařilo se načíst konfiguraci bota 😭");
-  }
-}
-
-// REACTION ROLES RENDER
-function renderReactionList() {
-  const wrap = document.getElementById('reactionList');
-  if (!wrap || !state.reactionRoles?.emojiRoleMap) return;
-  wrap.innerHTML = "";
-  for (const [emoji, roleId] of Object.entries(state.reactionRoles.emojiRoleMap)) {
-    const div = document.createElement("div");
-    div.classList.add("reaction-row");
-    div.innerHTML = `
-      <input class="txt emoji" value="${emoji}" />
-      <input class="txt roleid" value="${roleId}" />
-      <button class="btn sec small" onclick="this.parentNode.remove()">Smazat</button>
-    `;
-    wrap.appendChild(div);
-  }
-}
-
-    // === INIT FORM FIELDS ===
-    function loadInitial(){
-      // BOT IDENTITY
-      document.getElementById('botDisplayName').value = state.botIdentity.displayName;
-      document.getElementById('botStatus').value = state.botIdentity.statusText;
-
-      // IDS / CHANNELS / ROLES
-      document.getElementById('guildId').value = state.channelsAndRoles.guildId;
-      document.getElementById('welcomeChannelId').value = state.channelsAndRoles.welcomeChannelId;
-      document.getElementById('joinLogChannelId').value = state.channelsAndRoles.joinLogChannelId;
-      document.getElementById('roleSelectChannelId').value = state.channelsAndRoles.roleSelectChannelId;
-      document.getElementById('nazdarChannelId').value = state.channelsAndRoles.nazdarChannelId;
-      document.getElementById('leaveBanChannelId').value = state.channelsAndRoles.leaveBanChannelId;
-      document.getElementById('onlineLogChannelId').value = state.channelsAndRoles.onlineLogChannelId;
-      document.getElementById('memberStatsChannelId').value = state.channelsAndRoles.memberStatsChannelId;
-      document.getElementById('unverifiedStatsChannelId').value = state.channelsAndRoles.unverifiedStatsChannelId;
-      document.getElementById('verifiedRoleId').value = state.channelsAndRoles.verifiedRoleId;
-      document.getElementById('unverifiedRoleId').value = state.channelsAndRoles.unverifiedRoleId;
-      document.getElementById('fallenPhoenixId').value = state.channelsAndRoles.fallenPhoenixId;
-
-      // WELCOME / VERIFY FLOW
-      document.getElementById('welcomeTitle').value = state.welcomeFlow.greetingEmbed.title;
-      document.getElementById('welcomeColor').value = state.welcomeFlow.greetingEmbed.color;
-      document.getElementById('welcomeDesc').value = state.welcomeFlow.greetingEmbed.description;
-      document.getElementById('verifyQuestionText').value = state.welcomeFlow.verifyQuestionText;
-      document.getElementById('timeoutKickReason').value = state.welcomeFlow.timeoutKickReason;
-
-      document.getElementById('modLogTitle').value = state.welcomeFlow.modLogEmbed.title;
-      document.getElementById('modLogColor').value = state.welcomeFlow.modLogEmbed.color;
-      document.getElementById('modLogDescription').value = state.welcomeFlow.modLogEmbed.descriptionTemplate;
-
-      document.getElementById('approveText').value = state.welcomeFlow.modLogEmbed.approveMessage.textTemplate;
-      document.getElementById('approveColor').value = state.welcomeFlow.modLogEmbed.approveMessage.color;
-
-      document.getElementById('rejectText').value = state.welcomeFlow.modLogEmbed.rejectMessage.textTemplate;
-      document.getElementById('rejectColor').value = state.welcomeFlow.modLogEmbed.rejectMessage.color;
-
-      // REACTION ROLES
-      document.getElementById('rrTitle').value = state.reactionRoles.embed.title;
-      document.getElementById('rrColor').value = state.reactionRoles.embed.color;
-      document.getElementById('rrDescription').value = state.reactionRoles.embed.description;
-      document.getElementById('rrThumb').value = state.reactionRoles.embed.thumbnailUrl;
-      document.getElementById('rrImage').value = state.reactionRoles.embed.imageUrl;
-      renderReactionList();
-
-      // LEAVE/BAN LOG
-      document.getElementById('leaveText').value = state.leaveBanLogs.leave.textTemplate;
-      document.getElementById('leaveColor').value = state.leaveBanLogs.leave.color;
-      document.getElementById('banText').value = state.leaveBanLogs.ban.textTemplate;
-      document.getElementById('banColor').value = state.leaveBanLogs.ban.color;
-
-      // /BAN LOG
-      document.getElementById('banLogTitle').value = state.banCommandLog.title;
-      document.getElementById('banLogColor').value = state.banCommandLog.color;
-      document.getElementById('banLogDesc').value = state.banCommandLog.descriptionTemplate;
-
-      // AVATAR PREVIEW
-      document.getElementById('avatarPreview').style.backgroundImage =
-        `url('${state.avatarPreviewUrl}')`;
+        console.log("✅ Dashboard naplněn z config.json");
+      } catch (err) {
+        console.error("❌ Nepodařilo se načíst config:", err);
+        alert("Nepodařilo se načíst konfiguraci bota 😭");
+      }
     }
 
-    // REACTION ROLES RENDER
-   function renderReactionList() {
-  const wrap = document.getElementById('reactionList');
-  wrap.innerHTML = "";
+    // === REACTION ROLES RENDER ===
+    function renderReactionList() {
+      const wrap = document.getElementById('reactionList');
+      if (!wrap) return;
 
-  state.reactionRoles.emojiRoleMap.forEach((row, idx) => {
-    // hlavní řádek
-    const rowDiv = document.createElement('div');
-    rowDiv.className = "reaction-row";
+      wrap.innerHTML = "";
 
-    rowDiv.innerHTML = `
-      <div class="emoji-box" contenteditable="true" data-idx="${idx}" data-field="emoji">${row.emoji || ""}</div>
-      <input class="txt" data-idx="${idx}" data-field="label" placeholder="Popisek role" value="${row.label || ''}">
-      <input class="txt" data-idx="${idx}" data-field="roleId" placeholder="Role ID" value="${row.roleId || ''}">
-      <button class="btn sec" style="padding:8px 10px;font-size:.7rem;line-height:1;" onclick="removeReactionRow(${idx})">Smazat</button>
-    `;
+      // V configu máš array [{emoji, roleId, label}, ...]
+      const arr = state.reactionRoles?.emojiRoleMap || [];
+      arr.forEach((row, idx) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = "reaction-row";
 
-    // hint pod řádkem
-    const hintDiv = document.createElement('div');
-    hintDiv.className = "reaction-hint";
-    hintDiv.textContent = "Emoji může být buď klasický 🔥 nebo custom z tvýho serveru ve formátu <:nazev:123456789012345678>. Role ID = ID role, kterou bot přidá.";
+        rowDiv.innerHTML = `
+          <div class="emoji-box" contenteditable="true" data-idx="${idx}" data-field="emoji">${row.emoji || ""}</div>
+          <input class="txt" data-idx="${idx}" data-field="label" placeholder="Popisek role" value="${row.label || ''}">
+          <input class="txt" data-idx="${idx}" data-field="roleId" placeholder="Role ID" value="${row.roleId || ''}">
+          <button class="btn sec small" onclick="removeReactionRow(${idx})">Smazat</button>
+        `;
 
-    // připojit do wrapperu
-    wrap.appendChild(rowDiv);
-    wrap.appendChild(hintDiv);
-  });
-}
+        const hintDiv = document.createElement('div');
+        hintDiv.className = "reaction-hint";
+        hintDiv.textContent = "Emoji může být buď klasický 🔥 nebo custom z tvýho serveru ve formátu <:nazev:123456789012345678>. Role ID = ID role, kterou bot přidá.";
+
+        wrap.appendChild(rowDiv);
+        wrap.appendChild(hintDiv);
+      });
+    }
 
     function addReactionRow(){
+      if (!state.reactionRoles) state.reactionRoles = {};
+      if (!state.reactionRoles.emojiRoleMap) state.reactionRoles.emojiRoleMap = [];
       state.reactionRoles.emojiRoleMap.push({ emoji: "✨", roleId: "", label: "" });
       renderReactionList();
     }
@@ -1028,146 +901,119 @@ function renderReactionList() {
       renderReactionList();
     }
 
-    // === SAVE HANDLERS (zatím mocky -> jen alert / console.log) ===
-    function saveBotInfo(){
-      const newName = document.getElementById('botDisplayName').value.trim();
-      const newStatus = document.getElementById('botStatus').value.trim();
-      console.log("saveBotInfo()", { newName, newStatus });
-      alert("Uloženo (mock). Později POST /save-bot-identity 👍");
+    // === SAVE HANDLERS ===
+
+    // Bot jméno / status -> voláme náš backend endpoint /save-botsettings
+    function saveBotInfo() {
+      const displayName = document.getElementById("botDisplayName").value.trim();
+      const statusText = document.getElementById("botStatus").value.trim();
+
+      fetch("/save-botsettings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName, statusText })
+      })
+      .then(r => r.json())
+      .then(resp => {
+        if (resp.ok) {
+          alert(`✅ Uloženo! Bot se pokusí přejmenovat na "${displayName}" a změnit status.`);
+          loadInitial(); // po uložení znova natáhnem config
+        } else {
+          alert("❌ Chyba při ukládání: " + (resp.error || "neznámá chyba"));
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Nepovedlo se spojit se serverem.");
+      });
     }
+
     function resetBotInfo(){
       loadInitial();
     }
 
+    // IDs / kanály / role – zatím mock (nemáme backend /save-ids zatím hotovej)
     function saveIds(){
-      const data = {
-        guildId: document.getElementById('guildId').value.trim(),
-        welcomeChannelId: document.getElementById('welcomeChannelId').value.trim(),
-        joinLogChannelId: document.getElementById('joinLogChannelId').value.trim(),
-        roleSelectChannelId: document.getElementById('roleSelectChannelId').value.trim(),
-        nazdarChannelId: document.getElementById('nazdarChannelId').value.trim(),
-        leaveBanChannelId: document.getElementById('leaveBanChannelId').value.trim(),
-        onlineLogChannelId: document.getElementById('onlineLogChannelId').value.trim(),
-        memberStatsChannelId: document.getElementById('memberStatsChannelId').value.trim(),
-        unverifiedStatsChannelId: document.getElementById('unverifiedStatsChannelId').value.trim(),
-        verifiedRoleId: document.getElementById('verifiedRoleId').value.trim(),
-        unverifiedRoleId: document.getElementById('unverifiedRoleId').value.trim(),
-        fallenPhoenixId: document.getElementById('fallenPhoenixId').value.trim()
-      };
-      console.log("saveIds()", data);
-      alert("Uloženo (mock). Později POST /save-ids 👍");
+      alert("zatím mock -> až přidáme /save-ids na backend");
     }
     function resetIds(){
       loadInitial();
     }
 
+    // Welcome / verify / approve-deny – to backend UŽ máme (/save-welcome)
     function saveWelcome(){
-  const data = {
-    greetingEmbed: {
-      title: document.getElementById('welcomeTitle').value.trim(),
-      color: document.getElementById('welcomeColor').value,
-      description: document.getElementById('welcomeDesc').value.trim()
-    },
-    verifyQuestionText: document.getElementById('verifyQuestionText').value.trim(),
-    timeoutKickReason: document.getElementById('timeoutKickReason').value.trim(),
-    modLogEmbed: {
-      title: document.getElementById('modLogTitle').value.trim(),
-      color: document.getElementById('modLogColor').value,
-      descriptionTemplate: document.getElementById('modLogDescription').value.trim(),
-      approveMessage: {
-        textTemplate: document.getElementById('approveText').value.trim(),
-        color: document.getElementById('approveColor').value
-      },
-      rejectMessage: {
-        textTemplate: document.getElementById('rejectText').value.trim(),
-        color: document.getElementById('rejectColor').value
-      }
-    }
-  };
+      const data = {
+        greetingEmbed: {
+          title: document.getElementById('welcomeTitle').value.trim(),
+          color: document.getElementById('welcomeColor').value,
+          description: document.getElementById('welcomeDesc').value.trim()
+        },
+        verifyQuestionText: document.getElementById('verifyQuestionText').value.trim(),
+        timeoutKickReason: document.getElementById('timeoutKickReason').value.trim(),
+        modLogEmbed: {
+          title: document.getElementById('modLogTitle').value.trim(),
+          color: document.getElementById('modLogColor').value,
+          descriptionTemplate: document.getElementById('modLogDescription').value.trim(),
+          approveMessage: {
+            textTemplate: document.getElementById('approveText').value.trim(),
+            color: document.getElementById('approveColor').value
+          },
+          rejectMessage: {
+            textTemplate: document.getElementById('rejectText').value.trim(),
+            color: document.getElementById('rejectColor').value
+          }
+        }
+      };
 
-  fetch("/save-welcome", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
-  })
-  .then(r => r.json())
-  .then(resp => {
-    if (resp.ok) {
-      alert("Uloženo ✅ Bot teď jede s novým nastavením.");
-    } else {
-      alert("❌ Chyba při ukládání na server");
+      fetch("/save-welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      })
+      .then(r => r.json())
+      .then(resp => {
+        if (resp.ok) {
+          alert("Uloženo ✅ Bot teď jede s novým nastavením.");
+          loadInitial();
+        } else {
+          alert("❌ Chyba při ukládání na server");
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Nepovedlo se spojit se serverem (fetch /save-welcome spadnul)");
+      });
     }
-  })
-  .catch(err => {
-    console.error(err);
-    alert("❌ Nepovedlo se spojit se serverem (fetch /save-welcome spadnul)");
-  });
-}
 
     function resetWelcome(){
       loadInitial();
     }
 
+    // Reaction roles – zatím mock, backend endpoint ještě neexistuje
     function saveReactions(){
-      const rows = document.querySelectorAll('#reactionList .reaction-row');
-      const updated = [];
-      rows.forEach(r => {
-        const emoji = r.querySelector('.emoji-box').innerText.trim();
-        const label = r.querySelector('input[data-field="label"]').value.trim();
-        const roleId = r.querySelector('input[data-field="roleId"]').value.trim();
-        updated.push({ emoji, label, roleId });
-      });
-
-      const data = {
-        embed: {
-          title: document.getElementById('rrTitle').value.trim(),
-          color: document.getElementById('rrColor').value,
-          description: document.getElementById('rrDescription').value.trim(),
-          thumbnailUrl: document.getElementById('rrThumb').value.trim(),
-          imageUrl: document.getElementById('rrImage').value.trim()
-        },
-        emojiRoleMap: updated
-      };
-
-      console.log("saveReactions()", data);
-      alert("Uloženo (mock). Později POST /save-reactionroles 👍");
+      alert("zatím mock -> až přidáme /save-reactionroles na backend");
     }
     function resetReactions(){
       loadInitial();
     }
 
+    // Leave / Ban log – zatím mock
     function saveLeaveBan(){
-      const data = {
-        leave: {
-          textTemplate: document.getElementById('leaveText').value.trim(),
-          color: document.getElementById('leaveColor').value
-        },
-        ban: {
-          textTemplate: document.getElementById('banText').value.trim(),
-          color: document.getElementById('banColor').value
-        }
-      };
-      console.log("saveLeaveBan()", data);
-      alert("Uloženo (mock). Později POST /save-leaveban 👍");
+      alert("zatím mock -> /save-leaveban zatím není");
     }
     function resetLeaveBan(){
       loadInitial();
     }
 
+    // Ban log embed (/ban) – zatím mock
     function saveBanLog(){
-      const data = {
-        title: document.getElementById('banLogTitle').value.trim(),
-        color: document.getElementById('banLogColor').value,
-        descriptionTemplate: document.getElementById('banLogDesc').value.trim()
-      };
-      console.log("saveBanLog()", data);
-      alert("Uloženo (mock). Později POST /save-banlog 👍");
+      alert("zatím mock -> /save-banlog zatím není");
     }
     function resetBanLog(){
       loadInitial();
     }
 
-    // AVATAR
+    // AVATAR PREVIEW + upload mock
     const avatarInput = document.getElementById('avatarInput');
     avatarInput.addEventListener('change', () => {
       const file = avatarInput.files[0];
@@ -1187,62 +1033,31 @@ function renderReactionList() {
         alert("Nejdřív vyber obrázek 💀");
         return;
       }
-      console.log("uploadAvatar()", file);
-      alert("Mock upload hotov. Později POST /upload-avatar a bot zavolá client.user.setAvatar().");
+      alert("zatím mock -> /upload-avatar zatím není");
     }
 
-    // DEPLOY / RELOAD
-    function reloadConfig(){
-      console.log("reloadConfig() -> zavolá /reload-config na backendu");
-      alert("Mock reload. V reálu by se config načetl znovu do běžící instance bota.");
+    // Deploy / reload tlačítka
+    function doReloadConfig(){
+      fetch("/reload-config", { method: "POST" })
+        .then(r => r.json())
+        .then(resp => {
+          if (resp.ok) {
+            alert("♻️ Reloadnuto v běžícím botovi");
+          } else {
+            alert("❌ Reload selhal");
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("❌ Nepovedlo se zavolat /reload-config");
+        });
     }
 
     function publishChanges(){
-      console.log("publishChanges() -> git add/commit/push config.json");
-      alert("Mock publish. V reálu se commitne a pushne do repa 🔥");
+      alert("zatím mock -> publish (git push) časem");
     }
 
-    function saveBotInfo() {
-  const displayName = document.getElementById("botDisplayName").value.trim();
-  const statusText = document.getElementById("botStatus").value.trim();
-
-  fetch("/save-botsettings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ displayName, statusText })
-  })
-  .then(r => r.json())
-  .then(resp => {
-    if (resp.ok) {
-      alert(`✅ Uloženo! Bot se pokusí přejmenovat na "${displayName}" a změnit status.`);
-    } else {
-      alert("❌ Chyba při ukládání: " + (resp.error || "neznámá chyba"));
-    }
-  })
-  .catch(err => {
-    console.error(err);
-    alert("❌ Nepovedlo se spojit se serverem.");
-  });
-}
-
-function resetBotInfo() {
-  document.getElementById("botDisplayName").value = "";
-  document.getElementById("botStatus").value = "";
-}
-function loadInitial() {
-  fetch("/config")
-    .then(r => r.json())
-    .then(cfg => {
-      // předvyplní políčka
-      if (cfg.botIdentity) {
-        document.getElementById("botDisplayName").value = cfg.botIdentity.displayName || "";
-        document.getElementById("botStatus").value = cfg.botIdentity.statusText || "";
-      }
-    })
-    .catch(err => console.error("Nepodařilo se načíst config:", err));
-}
-
-    // init
+    // init page load
     loadInitial();
   </script>
 
