@@ -1112,6 +1112,46 @@
       alert("Mock publish. V reálu se commitne a pushne do repa 🔥");
     }
 
+    function saveBotInfo() {
+  const displayName = document.getElementById("botDisplayName").value.trim();
+  const statusText = document.getElementById("botStatus").value.trim();
+
+  fetch("/save-botsettings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ displayName, statusText })
+  })
+  .then(r => r.json())
+  .then(resp => {
+    if (resp.ok) {
+      alert(`✅ Uloženo! Bot se pokusí přejmenovat na "${displayName}" a změnit status.`);
+    } else {
+      alert("❌ Chyba při ukládání: " + (resp.error || "neznámá chyba"));
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("❌ Nepovedlo se spojit se serverem.");
+  });
+}
+
+function resetBotInfo() {
+  document.getElementById("botDisplayName").value = "";
+  document.getElementById("botStatus").value = "";
+}
+function loadInitial() {
+  fetch("/config")
+    .then(r => r.json())
+    .then(cfg => {
+      // předvyplní políčka
+      if (cfg.botIdentity) {
+        document.getElementById("botDisplayName").value = cfg.botIdentity.displayName || "";
+        document.getElementById("botStatus").value = cfg.botIdentity.statusText || "";
+      }
+    })
+    .catch(err => console.error("Nepodařilo se načíst config:", err));
+}
+
     // init
     loadInitial();
   </script>

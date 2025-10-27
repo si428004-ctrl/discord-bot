@@ -11,6 +11,21 @@ function reloadConfig() {
   try {
     config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
     console.log("♻️ Config reloadnutý.");
+
+    if (client?.user && config.botIdentity?.displayName) {
+      client.user.setUsername(config.botIdentity.displayName)
+        .then(() => console.log(`💫 Bot přejmenován na: ${config.botIdentity.displayName}`))
+        .catch(err => console.warn("⚠️ Nepodařilo se změnit jméno bota:", err.message));
+    }
+
+    if (client?.user && config.botIdentity?.statusText) {
+      client.user.setPresence({
+        activities: [{ name: config.botIdentity.statusText }],
+        status: "online"
+      });
+      console.log(`💬 Status bota nastaven na: ${config.botIdentity.statusText}`);
+    }
+
   } catch (err) {
     console.error("❌ Chyba při reloadu configu:", err.message);
   }
@@ -31,35 +46,84 @@ app.post("/save-welcome", (req, res) => {
   try {
     const incoming = req.body;
 
+    // welcome embed
     config.welcomeFlow.greetingEmbed.title = incoming.greetingEmbed.title;
     config.welcomeFlow.greetingEmbed.color = incoming.greetingEmbed.color;
     config.welcomeFlow.greetingEmbed.description = incoming.greetingEmbed.description;
 
+    // otázka pro verify a kick reason
     config.welcomeFlow.verifyQuestionText = incoming.verifyQuestionText;
     config.welcomeFlow.timeoutKickReason = incoming.timeoutKickReason;
 
+    // embed do mod logu
     config.welcomeFlow.modLogEmbed.title = incoming.modLogEmbed.title;
     config.welcomeFlow.modLogEmbed.color = incoming.modLogEmbed.color;
     config.welcomeFlow.modLogEmbed.descriptionTemplate =
       incoming.modLogEmbed.descriptionTemplate;
 
+    // approve zpráva
     config.welcomeFlow.modLogEmbed.approveMessage.textTemplate =
       incoming.modLogEmbed.approveMessage.textTemplate;
     config.welcomeFlow.modLogEmbed.approveMessage.color =
       incoming.modLogEmbed.approveMessage.color;
 
+    // reject zpráva
     config.welcomeFlow.modLogEmbed.rejectMessage.textTemplate =
       incoming.modLogEmbed.rejectMessage.textTemplate;
     config.welcomeFlow.modLogEmbed.rejectMessage.color =
       incoming.modLogEmbed.rejectMessage.color;
 
+    // uložit na disk
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
 
+    // přenačíst config + propsat do bota
+    reloadConfig();
+
+    // odpověď pro dashboard
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /save-welcome error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+
+// uloží nastavení bota (displayName) a přejmenuje bota
+app.post("/save-botsettings", (req, res) => {
+  try {
+    const { displayName, statusText } = req.body;
+
+    if (!displayName || !displayName.trim()) {
+      return res.status(400).json({ ok: false, error: "Missing displayName" });
+    }
+
+    // zajistíme, že botIdentity existuje
+    if (!config.botIdentity) config.botIdentity = {};
+
+    // update v configu v paměti
+    config.botIdentity.displayName = displayName.trim();
+    config.botIdentity.statusText = statusText?.trim() || "";
+
+    // uložit config.json na disk
+    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+
+    // reloadConfig() → přejmenuje bota a můžeme přidat i status
     reloadConfig();
 
     res.json({ ok: true });
   } catch (err) {
-    console.error("❌ /save-welcome error:", err);
+    console.error("❌ /save-botsettings error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.get("/config", (req, res) => {
+  try {
+    const raw = fs.readFileSync("./config.json", "utf8");
+    const json = JSON.parse(raw);
+    res.json(json);
+  } catch (err) {
+    console.error("❌ Chyba při čtení configu:", err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
