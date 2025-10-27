@@ -839,6 +839,96 @@
       avatarPreviewUrl: "https://placehold.co/160x160/png"
     };
 
+let state = {}; // bude tu globální objekt pro všechny data
+
+async function loadInitial() {
+  try {
+    const res = await fetch("/config");
+    if (!res.ok) throw new Error("Fetch /config selhal");
+    state = await res.json();
+
+    // BOT IDENTITY
+    document.getElementById('botDisplayName').value = state.botIdentity.displayName;
+    document.getElementById('botStatus').value = state.botIdentity.statusText;
+
+    // IDS / CHANNELS / ROLES
+    document.getElementById('guildId').value = state.channelsAndRoles.guildId;
+    document.getElementById('welcomeChannelId').value = state.channelsAndRoles.welcomeChannelId;
+    document.getElementById('joinLogChannelId').value = state.channelsAndRoles.joinLogChannelId;
+    document.getElementById('roleSelectChannelId').value = state.channelsAndRoles.roleSelectChannelId;
+    document.getElementById('nazdarChannelId').value = state.channelsAndRoles.nazdarChannelId;
+    document.getElementById('leaveBanChannelId').value = state.channelsAndRoles.leaveBanChannelId;
+    document.getElementById('onlineLogChannelId').value = state.channelsAndRoles.onlineLogChannelId;
+    document.getElementById('memberStatsChannelId').value = state.channelsAndRoles.memberStatsChannelId;
+    document.getElementById('unverifiedStatsChannelId').value = state.channelsAndRoles.unverifiedStatsChannelId;
+    document.getElementById('verifiedRoleId').value = state.channelsAndRoles.verifiedRoleId;
+    document.getElementById('unverifiedRoleId').value = state.channelsAndRoles.unverifiedRoleId;
+    document.getElementById('fallenPhoenixId').value = state.channelsAndRoles.fallenPhoenixId;
+
+    // WELCOME / VERIFY FLOW
+    document.getElementById('welcomeTitle').value = state.welcomeFlow.greetingEmbed.title;
+    document.getElementById('welcomeColor').value = state.welcomeFlow.greetingEmbed.color;
+    document.getElementById('welcomeDesc').value = state.welcomeFlow.greetingEmbed.description;
+    document.getElementById('verifyQuestionText').value = state.welcomeFlow.verifyQuestionText;
+    document.getElementById('timeoutKickReason').value = state.welcomeFlow.timeoutKickReason;
+
+    document.getElementById('modLogTitle').value = state.welcomeFlow.modLogEmbed.title;
+    document.getElementById('modLogColor').value = state.welcomeFlow.modLogEmbed.color;
+    document.getElementById('modLogDescription').value = state.welcomeFlow.modLogEmbed.descriptionTemplate;
+
+    document.getElementById('approveText').value = state.welcomeFlow.modLogEmbed.approveMessage.textTemplate;
+    document.getElementById('approveColor').value = state.welcomeFlow.modLogEmbed.approveMessage.color;
+
+    document.getElementById('rejectText').value = state.welcomeFlow.modLogEmbed.rejectMessage.textTemplate;
+    document.getElementById('rejectColor').value = state.welcomeFlow.modLogEmbed.rejectMessage.color;
+
+    // REACTION ROLES
+    document.getElementById('rrTitle').value = state.reactionRoles.embed.title;
+    document.getElementById('rrColor').value = state.reactionRoles.embed.color;
+    document.getElementById('rrDescription').value = state.reactionRoles.embed.description;
+    document.getElementById('rrThumb').value = state.reactionRoles.embed.thumbnailUrl;
+    document.getElementById('rrImage').value = state.reactionRoles.embed.imageUrl;
+    renderReactionList();
+
+    // LEAVE/BAN LOG
+    document.getElementById('leaveText').value = state.leaveBanLogs.leave.textTemplate;
+    document.getElementById('leaveColor').value = state.leaveBanLogs.leave.color;
+    document.getElementById('banText').value = state.leaveBanLogs.ban.textTemplate;
+    document.getElementById('banColor').value = state.leaveBanLogs.ban.color;
+
+    // /BAN LOG
+    document.getElementById('banLogTitle').value = state.banCommandLog.title;
+    document.getElementById('banLogColor').value = state.banCommandLog.color;
+    document.getElementById('banLogDesc').value = state.banCommandLog.descriptionTemplate;
+
+    // AVATAR PREVIEW
+    document.getElementById('avatarPreview').style.backgroundImage =
+      `url('${state.avatarPreviewUrl}')`;
+
+    console.log("✅ Dashboard naplněn z config.json");
+  } catch (err) {
+    console.error("❌ Nepodařilo se načíst config:", err);
+    alert("Nepodařilo se načíst konfiguraci bota 😭");
+  }
+}
+
+// REACTION ROLES RENDER
+function renderReactionList() {
+  const wrap = document.getElementById('reactionList');
+  if (!wrap || !state.reactionRoles?.emojiRoleMap) return;
+  wrap.innerHTML = "";
+  for (const [emoji, roleId] of Object.entries(state.reactionRoles.emojiRoleMap)) {
+    const div = document.createElement("div");
+    div.classList.add("reaction-row");
+    div.innerHTML = `
+      <input class="txt emoji" value="${emoji}" />
+      <input class="txt roleid" value="${roleId}" />
+      <button class="btn sec small" onclick="this.parentNode.remove()">Smazat</button>
+    `;
+    wrap.appendChild(div);
+  }
+}
+
     // === INIT FORM FIELDS ===
     function loadInitial(){
       // BOT IDENTITY
