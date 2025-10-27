@@ -323,8 +323,15 @@ app.post("/save-ids", requireAdminAuth, (req, res) => {
 // --- 💾 POST /save-reactionroles --- //
 app.post("/save-reactionroles", requireAdminAuth, (req, res) => {
   try {
+    // uložíme nový embed + emojiRoleMap
     config.reactionRoles = req.body;
+
+    // zapíšeme na disk
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+
+    // 💥 Tohle je důležitý: propsat nový config do běžící instance bota
+    reloadConfig();
+
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ /save-reactionroles error:", err);
