@@ -303,8 +303,16 @@ app.post(
 // --- 💾 POST /save-ids --- //
 app.post("/save-ids", requireAdminAuth, (req, res) => {
   try {
+    // uložíme nové IDčka do configu v paměti
     config.channelsAndRoles = req.body;
+
+    // přepíšeme config.json na disku
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+
+    // 🔥 přenačteme config do bota, ať se změny projeví hned
+    reloadConfig();
+
+    // hotovo
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ /save-ids error:", err);
