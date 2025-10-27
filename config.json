@@ -1,0 +1,67 @@
+{
+  "botIdentity": {
+    "displayName": "Fallen Phoenix",
+    "statusText": "🔥 Ready to burn"
+  },
+  "channelsAndRoles": {
+    "guildId": "1400568910176194600",
+    "welcomeChannelId": "1428862251162403019",
+    "joinLogChannelId": "1428864324474114141",
+    "verifiedRoleId": "1428624557635407902",
+    "unverifiedRoleId": "1428863230217945198",
+    "roleSelectChannelId": "1409197870518636554",
+    "leaveBanChannelId": "1428817792991363103",
+    "memberStatsChannelId": "1429158078980423913",
+    "unverifiedStatsChannelId": "1429189687288926379",
+    "fallenPhoenixId": "1428857086304850051",
+    "nazdarChannelId": "1400569915437748254",
+    "onlineLogChannelId": "1421633740689506405"
+  },
+  "welcomeFlow": {
+    "greetingEmbed": {
+      "title": "N A Z D A R !",
+      "description": "Vítej {USER}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!",
+      "color": "#FF0000"
+    },
+    "verifyQuestionText": "Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?",
+    "modLogEmbed": {
+      "title": "🆕 Nový člen na serveru",
+      "descriptionTemplate": "👤 **Uživatel:** {USER}\n📝 **Odpověď:**\n\n{ANSWER}",
+      "color": "#FF0000",
+      "approveMessage": {
+        "textTemplate": "{USER} byl schválen uživatelem {MOD} ✅",
+        "color": "#00FF00"
+      },
+      "rejectMessage": {
+        "textTemplate": "{USER} byl odmítnut uživatelem {MOD} ❌",
+        "color": "#FF0000"
+      }
+    },
+    "timeoutKickReason": "Neodpověděl na uvítací otázku během 24 hodin"
+  },
+  "reactionRoles": {
+    "embed": {
+      "title": "Jakou linku mainíš?",
+      "description": "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!",
+      "color": "#29AC5F",
+      "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png",
+      "imageUrl": "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
+    },
+    "emojiRoleMap": [
+      { "emoji": "<:adc:1423344369523495023>", "label": "ADC", "roleId": "1423292319150506066" },
+      { "emoji": "<:top_:1423344343527198790>", "label": "TOP", "roleId": "1423293095319048202" },
+      { "emoji": "<:support:1423344317979951256>", "label": "SUPPORT", "roleId": "1423292503112814662" },
+      { "emoji": "<:jgl:1423344292407279647>", "label": "JUNGLE", "roleId": "1423292924925575280" },
+      { "emoji": "<:mid:1423344256076091402>", "label": "MID", "roleId": "1423292659572674570" }
+    ]
+  },
+  "leaveBanLogs": {
+    "leave": { "textTemplate": "{USER} opustil server.", "color": "#FFD700" },
+    "ban": { "textTemplate": "{USER} dostal BAN!", "color": "#FF0000" }
+  },
+  "banCommandLog": {
+    "title": "🚫 BAN",
+    "descriptionTemplate": "**User:** {USER} ({USER_ID})\n**Banned by:** {MOD}\n**Reason:** {REASON}",
+    "color": "#FF0000"
+  }
+}

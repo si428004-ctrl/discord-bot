@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Fallen Phoenix Bot Panel</title>
+  <style>
+    :root {
+      --bg-main: #0f1117;
+      --bg-card: #1a1d29;
+      --bg-card-alt: #22263a;
+      --txt-main: #fff;
+      --txt-dim: #9ca3af;
+      --accent: #ff4d00;
+      --radius-xl: 16px;
+      --radius-lg: 10px;
+      --border-col: rgba(255,255,255,0.07);
+      --input-bg: rgba(255,255,255,0.05);
+    }
+
+    body {
+      background: var(--bg-main);
+      color: var(--txt-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", Roboto, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 24px;
+      line-height: 1.4;
+    }
+
+    .layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0,1fr) 320px;
+      gap: 24px;
+    }
+
+    header.app-header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .title-wrap h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-wrap h1 .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 999px;
+      box-shadow: 0 0 12px var(--accent);
+    }
+
+    .title-wrap .sub {
+      font-size: .8rem;
+      color: var(--txt-dim);
+      margin-top: 2px;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button.btn {
+      appearance: none;
+      border: 0;
+      border-radius: var(--radius-lg);
+      background: var(--accent);
+      color: #fff;
+      font-size: .8rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 10px 14px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(255,77,0,.3);
+    }
+    button.btn.sec {
+      background: transparent;
+      color: var(--txt-main);
+      border: 1px solid var(--border-col);
+      box-shadow: none;
+    }
+    button.btn:active {
+      transform: scale(.98);
+    }
+
+    /* cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-col);
+      border-radius: var(--radius-xl);
+      padding: 16px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .card-header .left .label {
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .card-header .left h2 {
+      font-size: .95rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 2px 0 0;
+    }
+    .card-header .left .desc {
+      font-size: .8rem;
+      color: var(--txt-dim);
+      margin-top: 2px;
+      max-width: 800px;
+      line-height: 1.4;
+      white-space: pre-line;
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(min(260px,100%),1fr));
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .field label {
+      font-size: .75rem;
+      font-weight: 500;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hint {
+      font-size: .7rem;
+      color: var(--txt-dim);
+      line-height: 1.3;
+      white-space: pre-line;
+    }
+
+    input.txt,
+    textarea.txt,
+    select.txt {
+      width: 100%;
+      background: var(--input-bg);
+      color: #fff;
+      font-size: .8rem;
+      line-height: 1.4;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-col);
+      padding: 10px 12px;
+      font-family: inherit;
+      outline: none;
+    }
+    textarea.txt {
+      min-height: 80px;
+      resize: vertical;
+    }
+    input.color {
+      width: 44px;
+      height: 36px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-col);
+      background: var(--input-bg);
+      cursor: pointer;
+    }
+
+    .mini-card {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border-col);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: .8rem;
+    }
+
+    /* reaction roles layout tweak */
+.reaction-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 0.8fr auto;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: .8rem;
+  margin-bottom: 8px;
+  /* ten margin-bottom nám udělá mezeru nad hintem pod řádkem */
+}
+
+.reaction-row .emoji-box {
+  display: flex;
+  align-items: center;
+  background: var(--input-bg);
+  border: 1px solid var(--border-col);
+  border-radius: var(--radius-lg);
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: .75rem;
+  line-height: 1.2;
+  cursor: text;
+  color: #fff;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.reaction-row input.txt {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: .75rem;
+  line-height: 1.2;
+}
+
+.reaction-hint {
+  grid-column: 1 / -1;
+  font-size: .7rem;
+  color: var(--txt-dim);
+  line-height: 1.3;
+  margin-top: -4px;
+  margin-bottom: 16px;
+}
+
+    .avatar-card {
+      text-align: center;
+    }
+    .avatar-preview {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      border: 2px solid var(--border-col);
+      background-size: cover;
+      background-position: center;
+      margin: 0 auto 8px;
+    }
+    .avatar-filename {
+      font-size: .7rem;
+      color: var(--txt-dim);
+      word-break: break-all;
+    }
+
+    .footer-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    @media(max-width: 900px){
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      header.app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .top-actions {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+    }
+
+/* rozdělená dvousloupcová sekce pro leave/ban card */
+.split-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px,100%),1fr));
+  gap: 16px;
+}
+
+/* taková "mini-card" uvnitř pro LEAVE a pro BAN */
+.subcard-block {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-col);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: .8rem;
+}
+
+/* řádky uvnitř těch sub bloků (text + barva vedle sebe apod.) */
+.subcard-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.subcard-row .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.subcard-row .field.color-field {
+  flex: 0 0 auto;
+  width: 70px;
+  min-width: 70px;
+}
+
+
+  </style>
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="title-wrap">
+        <h1>
+          <span class="dot"></span>
+          Fallen Phoenix • Admin panel
+        </h1>
+        <div class="sub">Rychlý úpravy bez šťourání se v kódu 😮‍💨</div>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn sec" onclick="reloadConfig()">Reload config v botovi</button>
+        <button class="btn" onclick="publishChanges()">Publish (git push)</button>
+      </div>
+    </header>
+
+    <!-- MAIN COLUMN -->
+    <main class="main-col" style="display:flex;flex-direction:column;gap:24px;">
+
+      <!-- BOT INFO -->
+      <section class="card" id="botInfoCard">
+        <div class="card-header">
+          <div class="left">
+            <div class="label">Bot</div>
+            <h2>Identita bota</h2>
+            <div class="desc">Jméno, status a vibe bota na Discordu.</div>
+          </div>
+        </div>
+
+        <div class="section-grid">
+          <div class="field">
+            <label>Jméno bota (display name)</label>
+            <input id="botDisplayName" class="txt" placeholder="Fallen Phoenix" />
+            <div class="hint">Tohle je jak se bot prezentuje veřejně.</div>
+          </div>
+
+          <div class="field">
+            <label>Status text (custom status)</label>
+            <input id="botStatus" class="txt" placeholder="🔥 Ready to burn" />
+            <div class="hint">Např. "Watching over the server", "type /verify"</div>
+          </div>
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn sec" onclick="resetBotInfo()">Zrušit změny</button>
+          <button class="btn" onclick="saveBotInfo()">Uložit</button>
+        </div>
+      </section>
+
+      <!-- CHANNELS / ROLES / IDs -->
+      <section class="card" id="idCard">
+        <div class="card-header">
+          <div class="left">
+            <div class="label">Server</div>
+            <h2>Kanály, role a IDčka</h2>
+            <div class="desc">
+              Tohle říká botovi, kam má psát logy, kde je ověřování, který role dává atd.
+              Když tady něco přepíšeš, nehrabeš se do logiky bota – jen mu ukážeš jiný kanál/roli.
+            </div>
+          </div>
+        </div>
+
+        <div class="section-grid">
+          <div class="field">
+            <label>Guild ID</label>
+            <input id="guildId" class="txt" />
+            <div class="hint">ID tvýho hlavního serveru.</div>
+          </div>
+
+          <div class="field">
+            <label>Channel: Verifikace nováčků</label>
+            <input id="welcomeChannelId" class="txt" />
+            <div class="hint">Sem bot po joinu píše otázku “proč chceš sem být?”</div>
+          </div>
+
+          <div class="field">
+            <label>Channel: Log na schválení (JOIN_LOG)</label>
+            <input id="joinLogChannelId" class="txt" />
+            <div class="hint">Sem chodí embed s odpovědí nováčka a modové tam klikají ✅ / ❌</div>
+          </div>
+
+          <div class="field">
+            <label>Channel: Reaction role výběr</label>
+            <input id="roleSelectChannelId" class="txt" />
+            <div class="hint">Kanál kde je embed “Jakou linku mainíš?”</div>
+          </div>
+
+          <div class="field">
+            <label>Channel: Nazdar / welcome embed</label>
+            <input id="nazdarChannelId" class="txt" />
+            <div class="hint">Sem chodí ten veřejnej “N A Z D A R !” embed.</div>
+          </div>
+
+          <div class="field">
+            <label>Channel: Odchody & bany</label>
+            <input id="leaveBanChannelId" class="txt" />
+            <div class="hint">“XYZ opustil server.” / “XYZ dostal BAN!”</div>
+          </div>
+
+          <div class="field">
+            <label>Channel: Online log</label>
+            <input id="onlineLogChannelId" class="txt" />
+            <div class="hint">Sem bot hází “🟢 Bot je zpět online” a /ban embed logy.</div>
+          </div>
+
+          <div class="field">
+            <label>Channel: Počet members</label>
+            <input id="memberStatsChannelId" class="txt" />
+            <div class="hint">Kanál kterému bot mění název na “🔢︱Mᴇᴍʙᴇʀs: X”.</div>
+          </div>
+
+          <div class="field">
+            <label>Channel: Počet neověřených</label>
+            <input id="unverifiedStatsChannelId" class="txt" />
+            <div class="hint">Kanál kterému bot mění název na “❔︱Uɴᴠᴇʀɪғɪᴇᴅ: Y”.</div>
+          </div>
+
+          <div class="field">
+            <label>Role ID: VERIFIED</label>
+            <input id="verifiedRoleId" class="txt" />
+            <div class="hint">Tohle dáváme po schválení ✅</div>
+          </div>
+
+          <div class="field">
+            <label>Role ID: UNVERIFIED</label>
+            <input id="unverifiedRoleId" class="txt" />
+            <div class="hint">Tohle dostane novej člen po joinu, dokud neprojde.</div>
+          </div>
+
+          <div class="field">
+            <label>Felčour ID bota (FALLEN_PHOENIX_ID)</label>
+            <input id="fallenPhoenixId" class="txt" />
+            <div class="hint">ID který nechceš počítat do statistik members.</div>
+          </div>
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn sec" onclick="resetIds()">Zrušit změny</button>
+          <button class="btn" onclick="saveIds()">Uložit</button>
+        </div>
+      </section>
+
+      <!-- WELCOME / VERIFY FLOW -->
+      <section class="card" id="welcomeEmbedCard">
+        <div class="card-header">
+          <div class="left">
+            <div class="label">Welcome & Verify</div>
+            <h2>Uvítací zpráva a ověření nováčků</h2>
+            <div class="desc">
+              1) Veřejný uvítací embed (“N A Z D A R !”)
+              2) DM styl otázky v kanálu pro ověření
+              3) Embed pro moderátory s odpovědí nováčka + approve/deny texty
+            </div>
+          </div>
+        </div>
+
+        <div class="section-grid">
+          <div class="field">
+            <label>Uvítací embed: Titulek</label>
+            <input id="welcomeTitle" class="txt" placeholder="N A Z D A R !" />
+          </div>
+
+          <div class="field">
+            <label>Uvítací embed: Barva</label>
+            <input id="welcomeColor" class="color" type="color" />
+            <div class="hint">Barva levého pruhu embedu (HEX)</div>
+          </div>
+
+          <div class="field" style="grid-column:1 / -1;">
+            <label>Uvítací embed: Popis</label>
+            <textarea id="welcomeDesc" class="txt" placeholder="Vítej {USER}! ..."></textarea>
+            <div class="hint">Použij {USER} pro zmínku nováčka.</div>
+          </div>
+        </div>
+
+        <div class="section-grid">
+          <div class="field" style="grid-column:1 / -1;">
+            <label>Verifikační otázka</label>
+            <textarea id="verifyQuestionText" class="txt" placeholder="Ahoj {USER}, pro schválení potřebujeme tvou odpověď..."></textarea>
+            <div class="hint">Tohle bot pošle novému členovi v kanálu pro ověření. {USER} = nováček.</div>
+          </div>
+
+          <div class="field" style="grid-column:1 / -1;">
+            <label>Důvod kicku po 24h bez odpovědi</label>
+            <input id="timeoutKickReason" class="txt" />
+            <div class="hint">Tohle se zapíše jako důvod při kicku.</div>
+          </div>
+        </div>
+
+        <div class="mini-card">
+          <div class="field">
+            <label>Embed pro moderátory: Titulek</label>
+            <input id="modLogTitle" class="txt" />
+          </div>
+
+          <div class="field">
+            <label>Embed pro moderátory: Barva</label>
+            <input id="modLogColor" class="color" type="color" />
+          </div>
+
+          <div class="field">
+            <label>Embed pro moderátory: Tělo (odpověď nováčka)</label>
+            <textarea id="modLogDescription" class="txt"></textarea>
+            <div class="hint">
+              {USER} = ping na člena
+              {ANSWER} = jeho odpověď
+            </div>
+          </div>
+
+          <div class="field-row" style="width:100%;">
+            <div class="field" style="flex:1;">
+              <label>Schváleno ✅ text</label>
+              <textarea id="approveText" class="txt"></textarea>
+              <div class="hint">{USER} = ten nový člen, {MOD} = moderátor co klikl ✅</div>
+            </div>
+
+            <div class="field">
+              <label>Schváleno ✅ barva</label>
+              <input id="approveColor" class="color" type="color" />
+            </div>
+          </div>
+
+          <div class="field-row" style="width:100%;">
+            <div class="field" style="flex:1;">
+              <label>Zamítnuto ❌ text</label>
+              <textarea id="rejectText" class="txt"></textarea>
+              <div class="hint">{USER} = nový člen, {MOD} = moderátor co klikl ❌</div>
+            </div>
+
+            <div class="field">
+              <label>Zamítnuto ❌ barva</label>
+              <input id="rejectColor" class="color" type="color" />
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn sec" onclick="resetWelcome()">Zrušit změny</button>
+          <button class="btn" onclick="saveWelcome()">Uložit</button>
+        </div>
+      </section>
+
+      <!-- REACTION ROLES -->
+      <section class="card" id="reactionRolesCard">
+        <div class="card-header">
+          <div class="left">
+            <div class="label">Reaction Roles</div>
+            <h2>Role na emoji</h2>
+            <div class="desc">
+              Embed “Jakou linku mainíš?” + mapování emoji → role.
+              Tohle ovlivní, kdo dostane jakou roli po kliknutí.
+            </div>
+          </div>
+          <button class="btn sec" onclick="addReactionRow()">+ Přidat další</button>
+        </div>
+
+        <div class="section-grid">
+          <div class="field">
+            <label>RR Embed: Titulek</label>
+            <input id="rrTitle" class="txt" />
+          </div>
+
+          <div class="field">
+            <label>RR Embed: Barva</label>
+            <input id="rrColor" class="color" type="color" />
+          </div>
+
+          <div class="field" style="grid-column:1 / -1;">
+            <label>RR Embed: Popis</label>
+            <textarea id="rrDescription" class="txt"></textarea>
+          </div>
+
+          <div class="field">
+            <label>RR Embed: Thumbnail URL</label>
+            <input id="rrThumb" class="txt" />
+          </div>
+
+          <div class="field">
+            <label>RR Embed: Image URL</label>
+            <input id="rrImage" class="txt" />
+          </div>
+        </div>
+
+        <div id="reactionList" class="mini-card">
+          <!-- dynamicky řádky emoji/role -->
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn sec" onclick="resetReactions()">Zrušit změny</button>
+          <button class="btn" onclick="saveReactions()">Uložit</button>
+        </div>
+      </section>
+
+      <!-- LEAVE / BAN LOG TEXTY -->
+<section class="card" id="leaveBanCard">
+  <div class="card-header">
+    <div class="left">
+      <div class="label">Odchody & Ban notifikace</div>
+      <h2>Log zprávy při leavu a banu</h2>
+      <div class="desc">
+        Když někdo odejde nebo dostane ban, bot to napíše do
+        kanálu Leave/Ban log. Tady si přepíšeš text a barvu.
+      </div>
+    </div>
+  </div>
+
+  <!-- nový layout: dva sloupce vedle sebe -->
+  <div class="split-2">
+    <!-- LEFT = ODCHOD -->
+    <div class="subcard-block">
+      <div class="field">
+        <label>Odchod: Text</label>
+        <textarea id="leaveText" class="txt" placeholder="{USER} opustil server."></textarea>
+        <div class="hint">{USER} = ten co leavnul</div>
+      </div>
+
+      <div class="subcard-row">
+        <div class="field color-field">
+          <label>Odchod: Barva</label>
+          <input id="leaveColor" class="color" type="color" />
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT = BAN -->
+    <div class="subcard-block">
+      <div class="field">
+        <label>Ban: Text</label>
+        <textarea id="banText" class="txt" placeholder="{USER} dostal BAN!"></textarea>
+        <div class="hint">{USER} = ten zabanovanej</div>
+      </div>
+
+      <div class="subcard-row">
+        <div class="field color-field">
+          <label>Ban: Barva</label>
+          <input id="banColor" class="color" type="color" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-actions">
+    <button class="btn sec" onclick="resetLeaveBan()">Zrušit změny</button>
+    <button class="btn" onclick="saveLeaveBan()">Uložit</button>
+  </div>
+</section>
+
+    </main>
+
+    <!-- SIDE COLUMN -->
+    <aside class="side-col" style="display:flex;flex-direction:column;gap:24px;">
+
+      <!-- AVATAR -->
+      <section class="card">
+        <div class="card-header">
+          <div class="left">
+            <div class="label">Avatar</div>
+            <h2>Logo bota</h2>
+            <div class="desc">Tady můžeš změnit profilovku bota (client.user.setAvatar).</div>
+          </div>
+        </div>
+
+        <div class="avatar-card">
+          <div id="avatarPreview" class="avatar-preview" style="background-image:url('https://placehold.co/160x160/png');"></div>
+          <div class="avatar-filename" id="avatarFilename">Žádný soubor</div>
+
+          <input style="display:none" type="file" id="avatarInput" accept="image/*" />
+          <button class="btn sec" style="width:100%;" onclick="document.getElementById('avatarInput').click()">Vybrat obrázek</button>
+          <button class="btn" style="width:100%;" onclick="uploadAvatar()">Nastavit jako avatar bota</button>
+          <div class="hint">Dáme POST /upload-avatar → bot zavolá client.user.setAvatar() z bufferu.</div>
+        </div>
+      </section>
+
+      <!-- DEPLOY -->
+      <section class="card">
+        <div class="card-header">
+          <div class="left">
+            <div class="label">Nasazení</div>
+            <h2>Deploy & údržba</h2>
+            <div class="desc">
+              Tadyhle bude časem “git add / commit / push” + reload configu v běžícím botu.
+              Zatím jen mock tlačítka.
+            </div>
+          </div>
+        </div>
+
+        <div class="mini-card">
+          <div class="field">
+            <label>Akce</label>
+            <div class="field-row" style="flex-wrap:wrap;gap:8px;">
+              <button class="btn sec" onclick="reloadConfig()">Reload config v botovi</button>
+              <button class="btn" onclick="publishChanges()">Publish (git push)</button>
+            </div>
+            <div class="hint">Publish = commitne config.json zpátky do repa a Render pak udělá redeploy.</div>
+          </div>
+        </div>
+      </section>
+
+    </aside>
+  </div>
+
+  <script>
+    // mock data = tohle by normálně bylo GET /config
+    const state = {
+      botIdentity: {
+        displayName: "Fallen Phoenix",
+        statusText: "🔥 Ready to burn"
+      },
+      channelsAndRoles: {
+        guildId: "1400568910176194600",
+        welcomeChannelId: "1428862251162403019",
+        joinLogChannelId: "1428864324474114141",
+        verifiedRoleId: "1428624557635407902",
+        unverifiedRoleId: "1428863230217945198",
+        roleSelectChannelId: "1409197870518636554",
+        leaveBanChannelId: "1428817792991363103",
+        memberStatsChannelId: "1429158078980423913",
+        unverifiedStatsChannelId: "1429189687288926379",
+        fallenPhoenixId: "1428857086304850051",
+        nazdarChannelId: "1400569915437748254",
+        onlineLogChannelId: "1421633740689506405"
+      },
+      welcomeFlow: {
+        greetingEmbed: {
+          title: "N A Z D A R !",
+          description: "Vítej {USER}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!",
+          color: "#FF0000"
+        },
+        verifyQuestionText: "Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?",
+        modLogEmbed: {
+          title: "🆕 Nový člen na serveru",
+          descriptionTemplate: "👤 **Uživatel:** {USER}\n📝 **Odpověď:**\n\n{ANSWER}",
+          color: "#FF0000",
+          approveMessage: {
+            textTemplate: "{USER} byl schválen uživatelem {MOD} ✅",
+            color: "#00FF00"
+          },
+          rejectMessage: {
+            textTemplate: "{USER} byl odmítnut uživatelem {MOD} ❌",
+            color: "#FF0000"
+          }
+        },
+        timeoutKickReason: "Neodpověděl na uvítací otázku během 24 hodin"
+      },
+      reactionRoles: {
+        embed: {
+          title: "Jakou linku mainíš?",
+          description: "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!",
+          color: "#29AC5F",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png",
+          imageUrl: "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
+        },
+        emojiRoleMap: [
+          {
+            emoji: "<:adc:1423344369523495023>",
+            roleId: "1423292319150506066",
+            label: "ADC"
+          },
+          {
+            emoji: "<:top_:1423344343527198790>",
+            roleId: "1423293095319048202",
+            label: "TOP"
+          },
+          {
+            emoji: "<:support:1423344317979951256>",
+            roleId: "1423292503112814662",
+            label: "SUPPORT"
+          },
+          {
+            emoji: "<:jgl:1423344292407279647>",
+            roleId: "1423292924925575280",
+            label: "JUNGLE"
+          },
+          {
+            emoji: "<:mid:1423344256076091402>",
+            roleId: "1423292659572674570",
+            label: "MID"
+          }
+        ]
+      },
+      leaveBanLogs: {
+        leave: {
+          textTemplate: "{USER} opustil server.",
+          color: "#FFD700"
+        },
+        ban: {
+          textTemplate: "{USER} dostal BAN!",
+          color: "#FF0000"
+        }
+      },
+      banCommandLog: {
+        title: "🚫 BAN",
+        descriptionTemplate: "**User:** {USER} ({USER_ID})\n**Banned by:** {MOD}\n**Reason:** {REASON}",
+        color: "#FF0000"
+      },
+      avatarPreviewUrl: "https://placehold.co/160x160/png"
+    };
+
+    // === INIT FORM FIELDS ===
+    function loadInitial(){
+      // BOT IDENTITY
+      document.getElementById('botDisplayName').value = state.botIdentity.displayName;
+      document.getElementById('botStatus').value = state.botIdentity.statusText;
+
+      // IDS / CHANNELS / ROLES
+      document.getElementById('guildId').value = state.channelsAndRoles.guildId;
+      document.getElementById('welcomeChannelId').value = state.channelsAndRoles.welcomeChannelId;
+      document.getElementById('joinLogChannelId').value = state.channelsAndRoles.joinLogChannelId;
+      document.getElementById('roleSelectChannelId').value = state.channelsAndRoles.roleSelectChannelId;
+      document.getElementById('nazdarChannelId').value = state.channelsAndRoles.nazdarChannelId;
+      document.getElementById('leaveBanChannelId').value = state.channelsAndRoles.leaveBanChannelId;
+      document.getElementById('onlineLogChannelId').value = state.channelsAndRoles.onlineLogChannelId;
+      document.getElementById('memberStatsChannelId').value = state.channelsAndRoles.memberStatsChannelId;
+      document.getElementById('unverifiedStatsChannelId').value = state.channelsAndRoles.unverifiedStatsChannelId;
+      document.getElementById('verifiedRoleId').value = state.channelsAndRoles.verifiedRoleId;
+      document.getElementById('unverifiedRoleId').value = state.channelsAndRoles.unverifiedRoleId;
+      document.getElementById('fallenPhoenixId').value = state.channelsAndRoles.fallenPhoenixId;
+
+      // WELCOME / VERIFY FLOW
+      document.getElementById('welcomeTitle').value = state.welcomeFlow.greetingEmbed.title;
+      document.getElementById('welcomeColor').value = state.welcomeFlow.greetingEmbed.color;
+      document.getElementById('welcomeDesc').value = state.welcomeFlow.greetingEmbed.description;
+      document.getElementById('verifyQuestionText').value = state.welcomeFlow.verifyQuestionText;
+      document.getElementById('timeoutKickReason').value = state.welcomeFlow.timeoutKickReason;
+
+      document.getElementById('modLogTitle').value = state.welcomeFlow.modLogEmbed.title;
+      document.getElementById('modLogColor').value = state.welcomeFlow.modLogEmbed.color;
+      document.getElementById('modLogDescription').value = state.welcomeFlow.modLogEmbed.descriptionTemplate;
+
+      document.getElementById('approveText').value = state.welcomeFlow.modLogEmbed.approveMessage.textTemplate;
+      document.getElementById('approveColor').value = state.welcomeFlow.modLogEmbed.approveMessage.color;
+
+      document.getElementById('rejectText').value = state.welcomeFlow.modLogEmbed.rejectMessage.textTemplate;
+      document.getElementById('rejectColor').value = state.welcomeFlow.modLogEmbed.rejectMessage.color;
+
+      // REACTION ROLES
+      document.getElementById('rrTitle').value = state.reactionRoles.embed.title;
+      document.getElementById('rrColor').value = state.reactionRoles.embed.color;
+      document.getElementById('rrDescription').value = state.reactionRoles.embed.description;
+      document.getElementById('rrThumb').value = state.reactionRoles.embed.thumbnailUrl;
+      document.getElementById('rrImage').value = state.reactionRoles.embed.imageUrl;
+      renderReactionList();
+
+      // LEAVE/BAN LOG
+      document.getElementById('leaveText').value = state.leaveBanLogs.leave.textTemplate;
+      document.getElementById('leaveColor').value = state.leaveBanLogs.leave.color;
+      document.getElementById('banText').value = state.leaveBanLogs.ban.textTemplate;
+      document.getElementById('banColor').value = state.leaveBanLogs.ban.color;
+
+      // /BAN LOG
+      document.getElementById('banLogTitle').value = state.banCommandLog.title;
+      document.getElementById('banLogColor').value = state.banCommandLog.color;
+      document.getElementById('banLogDesc').value = state.banCommandLog.descriptionTemplate;
+
+      // AVATAR PREVIEW
+      document.getElementById('avatarPreview').style.backgroundImage =
+        `url('${state.avatarPreviewUrl}')`;
+    }
+
+    // REACTION ROLES RENDER
+   function renderReactionList() {
+  const wrap = document.getElementById('reactionList');
+  wrap.innerHTML = "";
+
+  state.reactionRoles.emojiRoleMap.forEach((row, idx) => {
+    // hlavní řádek
+    const rowDiv = document.createElement('div');
+    rowDiv.className = "reaction-row";
+
+    rowDiv.innerHTML = `
+      <div class="emoji-box" contenteditable="true" data-idx="${idx}" data-field="emoji">${row.emoji || ""}</div>
+      <input class="txt" data-idx="${idx}" data-field="label" placeholder="Popisek role" value="${row.label || ''}">
+      <input class="txt" data-idx="${idx}" data-field="roleId" placeholder="Role ID" value="${row.roleId || ''}">
+      <button class="btn sec" style="padding:8px 10px;font-size:.7rem;line-height:1;" onclick="removeReactionRow(${idx})">Smazat</button>
+    `;
+
+    // hint pod řádkem
+    const hintDiv = document.createElement('div');
+    hintDiv.className = "reaction-hint";
+    hintDiv.textContent = "Emoji může být buď klasický 🔥 nebo custom z tvýho serveru ve formátu <:nazev:123456789012345678>. Role ID = ID role, kterou bot přidá.";
+
+    // připojit do wrapperu
+    wrap.appendChild(rowDiv);
+    wrap.appendChild(hintDiv);
+  });
+}
+
+    function addReactionRow(){
+      state.reactionRoles.emojiRoleMap.push({ emoji: "✨", roleId: "", label: "" });
+      renderReactionList();
+    }
+
+    function removeReactionRow(i){
+      state.reactionRoles.emojiRoleMap.splice(i,1);
+      renderReactionList();
+    }
+
+    // === SAVE HANDLERS (zatím mocky -> jen alert / console.log) ===
+    function saveBotInfo(){
+      const newName = document.getElementById('botDisplayName').value.trim();
+      const newStatus = document.getElementById('botStatus').value.trim();
+      console.log("saveBotInfo()", { newName, newStatus });
+      alert("Uloženo (mock). Později POST /save-bot-identity 👍");
+    }
+    function resetBotInfo(){
+      loadInitial();
+    }
+
+    function saveIds(){
+      const data = {
+        guildId: document.getElementById('guildId').value.trim(),
+        welcomeChannelId: document.getElementById('welcomeChannelId').value.trim(),
+        joinLogChannelId: document.getElementById('joinLogChannelId').value.trim(),
+        roleSelectChannelId: document.getElementById('roleSelectChannelId').value.trim(),
+        nazdarChannelId: document.getElementById('nazdarChannelId').value.trim(),
+        leaveBanChannelId: document.getElementById('leaveBanChannelId').value.trim(),
+        onlineLogChannelId: document.getElementById('onlineLogChannelId').value.trim(),
+        memberStatsChannelId: document.getElementById('memberStatsChannelId').value.trim(),
+        unverifiedStatsChannelId: document.getElementById('unverifiedStatsChannelId').value.trim(),
+        verifiedRoleId: document.getElementById('verifiedRoleId').value.trim(),
+        unverifiedRoleId: document.getElementById('unverifiedRoleId').value.trim(),
+        fallenPhoenixId: document.getElementById('fallenPhoenixId').value.trim()
+      };
+      console.log("saveIds()", data);
+      alert("Uloženo (mock). Později POST /save-ids 👍");
+    }
+    function resetIds(){
+      loadInitial();
+    }
+
+    function saveWelcome(){
+  const data = {
+    greetingEmbed: {
+      title: document.getElementById('welcomeTitle').value.trim(),
+      color: document.getElementById('welcomeColor').value,
+      description: document.getElementById('welcomeDesc').value.trim()
+    },
+    verifyQuestionText: document.getElementById('verifyQuestionText').value.trim(),
+    timeoutKickReason: document.getElementById('timeoutKickReason').value.trim(),
+    modLogEmbed: {
+      title: document.getElementById('modLogTitle').value.trim(),
+      color: document.getElementById('modLogColor').value,
+      descriptionTemplate: document.getElementById('modLogDescription').value.trim(),
+      approveMessage: {
+        textTemplate: document.getElementById('approveText').value.trim(),
+        color: document.getElementById('approveColor').value
+      },
+      rejectMessage: {
+        textTemplate: document.getElementById('rejectText').value.trim(),
+        color: document.getElementById('rejectColor').value
+      }
+    }
+  };
+
+  fetch("/save-welcome", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(resp => {
+    if (resp.ok) {
+      alert("Uloženo ✅ Bot teď jede s novým nastavením.");
+    } else {
+      alert("❌ Chyba při ukládání na server");
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("❌ Nepovedlo se spojit se serverem (fetch /save-welcome spadnul)");
+  });
+}
+
+    function resetWelcome(){
+      loadInitial();
+    }
+
+    function saveReactions(){
+      const rows = document.querySelectorAll('#reactionList .reaction-row');
+      const updated = [];
+      rows.forEach(r => {
+        const emoji = r.querySelector('.emoji-box').innerText.trim();
+        const label = r.querySelector('input[data-field="label"]').value.trim();
+        const roleId = r.querySelector('input[data-field="roleId"]').value.trim();
+        updated.push({ emoji, label, roleId });
+      });
+
+      const data = {
+        embed: {
+          title: document.getElementById('rrTitle').value.trim(),
+          color: document.getElementById('rrColor').value,
+          description: document.getElementById('rrDescription').value.trim(),
+          thumbnailUrl: document.getElementById('rrThumb').value.trim(),
+          imageUrl: document.getElementById('rrImage').value.trim()
+        },
+        emojiRoleMap: updated
+      };
+
+      console.log("saveReactions()", data);
+      alert("Uloženo (mock). Později POST /save-reactionroles 👍");
+    }
+    function resetReactions(){
+      loadInitial();
+    }
+
+    function saveLeaveBan(){
+      const data = {
+        leave: {
+          textTemplate: document.getElementById('leaveText').value.trim(),
+          color: document.getElementById('leaveColor').value
+        },
+        ban: {
+          textTemplate: document.getElementById('banText').value.trim(),
+          color: document.getElementById('banColor').value
+        }
+      };
+      console.log("saveLeaveBan()", data);
+      alert("Uloženo (mock). Později POST /save-leaveban 👍");
+    }
+    function resetLeaveBan(){
+      loadInitial();
+    }
+
+    function saveBanLog(){
+      const data = {
+        title: document.getElementById('banLogTitle').value.trim(),
+        color: document.getElementById('banLogColor').value,
+        descriptionTemplate: document.getElementById('banLogDesc').value.trim()
+      };
+      console.log("saveBanLog()", data);
+      alert("Uloženo (mock). Později POST /save-banlog 👍");
+    }
+    function resetBanLog(){
+      loadInitial();
+    }
+
+    // AVATAR
+    const avatarInput = document.getElementById('avatarInput');
+    avatarInput.addEventListener('change', () => {
+      const file = avatarInput.files[0];
+      if (!file) return;
+      document.getElementById('avatarFilename').innerText = file.name;
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('avatarPreview').style.backgroundImage = `url('${e.target.result}')`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function uploadAvatar(){
+      const file = avatarInput.files[0];
+      if (!file) {
+        alert("Nejdřív vyber obrázek 💀");
+        return;
+      }
+      console.log("uploadAvatar()", file);
+      alert("Mock upload hotov. Později POST /upload-avatar a bot zavolá client.user.setAvatar().");
+    }
+
+    // DEPLOY / RELOAD
+    function reloadConfig(){
+      console.log("reloadConfig() -> zavolá /reload-config na backendu");
+      alert("Mock reload. V reálu by se config načetl znovu do běžící instance bota.");
+    }
+
+    function publishChanges(){
+      console.log("publishChanges() -> git add/commit/push config.json");
+      alert("Mock publish. V reálu se commitne a pushne do repa 🔥");
+    }
+
+    // init
+    loadInitial();
+  </script>
+
+</body>
+</html>
