@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import fs from "fs";
 import multer from "multer";
 import fetch from "node-fetch";
-import { exec } from "child_process";
 import {
   Client,
   GatewayIntentBits,
@@ -23,6 +22,44 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // --- 📁 Načtení konfiguračního JSONu --- //
 let config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+
+// =====================
+// 📝 LOG BUFFER
+// =====================
+
+// budeme držet posledních třeba 200 řádků logu v paměti
+const LOG_LIMIT = 200;
+let logBuffer = [];
+
+// helper na push do bufferu
+function pushLog(level, msg) {
+  const line =
+    `[${new Date().toISOString()}] [${level}] ` +
+    (typeof msg === "string" ? msg : JSON.stringify(msg));
+
+  logBuffer.push(line);
+  if (logBuffer.length > LOG_LIMIT) {
+    logBuffer.splice(0, logBuffer.length - LOG_LIMIT);
+  }
+}
+
+// obalíme konzole, ale zároveň pořád logujeme do normální konzole Renderu
+const origLog = console.log;
+const origWarn = console.warn;
+const origError = console.error;
+
+console.log = (...args) => {
+  origLog(...args);
+  pushLog("INFO", args.join(" "));
+};
+console.warn = (...args) => {
+  origWarn(...args);
+  pushLog("WARN", args.join(" "));
+};
+console.error = (...args) => {
+  origError(...args);
+  pushLog("ERROR", args.join(" "));
+};
 
 // --- 🤖 Discord Bot klient --- //
 const client = new Client({
@@ -238,6 +275,20 @@ app.get("/config", requireAdminAuth, (req, res) => {
   }
 });
 
+// --- 🧾 GET /logs – dashboard si vytáhne runtime logy --- //
+app.get("/logs", requireAdminAuth, (req, res) => {
+  try {
+    // vrátíme jako text/plain, ať to můžeš hodit do <pre>
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.send(logBuffer.join("\n"));
+  } catch (err) {
+    console.error("❌ /logs error:", err);
+    res
+      .status(500)
+      .send("Nepodařilo se načíst logy z paměti serveru.");
+  }
+});
+
 // --- 💾 POST /save-welcome --- //
 app.post("/save-welcome", requireAdminAuth, (req, res) => {
   try {
@@ -369,7 +420,7 @@ app.post("/save-ids", requireAdminAuth, (req, res) => {
 
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
 
-    // přenačteme config do bota (hlavně kvůli statusu/jménu, ale ať je to konzistentní)
+    // přenačteme config do bota
     reloadConfig();
 
     res.json({ ok: true });
@@ -388,7 +439,7 @@ app.post("/save-reactionroles", requireAdminAuth, async (req, res) => {
 
     reloadConfig();
 
-    // 💥 hned po uložení syncni message v kanálu
+    // 💥 hned po uložení syncni/aktuální message v kanálu
     await syncReactionRoleMessage();
 
     res.json({ ok: true });
@@ -418,46 +469,6 @@ app.post("/save-banlog", requireAdminAuth, (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ /save-banlog error:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// --- ♻️ POST /reload-config --- //
-app.post("/reload-config", requireAdminAuth, (req, res) => {
-  reloadConfig();
-  res.json({ ok: true, message: "Config reloadnutý." });
-});
-
-// --- 🚀 POST /publish (git add/commit/push) --- //
-app.post("/publish", requireAdminAuth, (req, res) => {
-  try {
-    const { secret } = req.body;
-
-    if (!secret || secret !== process.env.PUBLISH_SECRET) {
-      console.warn("❌ /publish odmítnuto: špatný secret");
-      return res.status(403).json({ ok: false, error: "Invalid secret" });
-    }
-
-    const cmd =
-      'git add config.json && ' +
-      'git commit -m "dashboard update" || echo "nothing to commit" && ' +
-      `git push origin ${process.env.GIT_BRANCH || "main"}`;
-
-    exec(cmd, { cwd: process.cwd() }, (err, stdout, stderr) => {
-      console.log("📦 [publish] stdout:", stdout);
-      console.log("📦 [publish] stderr:", stderr);
-
-      if (err) {
-        console.error("❌ /publish git error:", err.message);
-        return res
-          .status(500)
-          .json({ ok: false, error: "git push fail", detail: stderr });
-      }
-
-      res.json({ ok: true, log: stdout });
-    });
-  } catch (err) {
-    console.error("❌ /publish handler error:", err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -928,7 +939,9 @@ client.on("interactionCreate", async i => {
       setTimeout(() => i.deleteReply().catch(() => {}), 1000);
     } catch (err) {
       if (err.code === 10008) {
-        console.log("⚠️ Některé zprávy už byly smazány dřív, přeskočeno.");
+        console.log(
+          "⚠️ Některé zprávy už byly smazány dřív, přeskočeno."
+        );
       } else {
         console.error("❌ Chyba při mazání zpráv:", err);
       }

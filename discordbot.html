@@ -301,7 +301,6 @@
       }
     }
 
-    /* rozdělená dvousloupcová sekce pro leave/ban card */
     .split-2 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(320px,100%),1fr));
@@ -336,6 +335,71 @@
       width: 70px;
       min-width: 70px;
     }
+
+    /* LOG MODAL */
+    .log-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 9999;
+    }
+
+    .log-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-col);
+      border-radius: var(--radius-xl);
+      width: min(800px, 100%);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 30px 100px rgba(0,0,0,0.8);
+    }
+
+    .log-modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-col);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .log-modal-header h3 {
+      color: #fff;
+      font-size: .9rem;
+      margin: 0;
+      font-weight: 600;
+    }
+    .log-close-btn {
+      background: transparent;
+      color: var(--txt-dim);
+      border: 1px solid var(--border-col);
+      border-radius: var(--radius-lg);
+      font-size: .7rem;
+      font-weight: 500;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .log-modal-body {
+      padding: 16px 20px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .7rem;
+      line-height: 1.4;
+      color: var(--txt-main);
+      white-space: pre;
+      background: #0c0e14;
+      border-bottom-left-radius: var(--radius-xl);
+      border-bottom-right-radius: var(--radius-xl);
+    }
+
+    .log-modal-body pre {
+      margin: 0;
+      color: var(--txt-main);
+    }
   </style>
 </head>
 <body>
@@ -353,8 +417,7 @@
       </div>
 
       <div class="top-actions">
-        <button class="btn sec" onclick="doReloadConfig()">Reload config v botovi</button>
-        <button class="btn" onclick="publishChanges()">Publish (git push)</button>
+        <button class="btn sec" onclick="openLogs()">Logs</button>
       </div>
     </header>
 
@@ -696,10 +759,10 @@
             <h2>Embed posílaný při /ban</h2>
             <div class="desc">
               To, co bot posílá do Online Log kanálu po úspěšném /ban.
-              Můžeš použít placeholdery:<br/>
-              {USER} = ping na banovanýho<br/>
-              {USER_ID} = ID banovanýho<br/>
-              {MOD} = kdo banoval<br/>
+              Můžeš použít placeholdery:
+              {USER} = ping na banovanýho
+              {USER_ID} = ID banovanýho
+              {MOD} = kdo banoval
               {REASON} = důvod
             </div>
           </div>
@@ -718,7 +781,7 @@
 
           <div class="field" style="grid-column:1 / -1;">
             <label>Tělo embedu</label>
-            <textarea id="banLogDesc" class="txt" placeholder="**User:** {USER} ({USER_ID})\n**Banned by:** {MOD}\n**Reason:** {REASON}"></textarea>
+            <textarea id="banLogDesc" class="txt" placeholder="**User:** {USER} ({USER_ID})&#10;**Banned by:** {MOD}&#10;**Reason:** {REASON}"></textarea>
           </div>
         </div>
 
@@ -754,32 +817,43 @@
         </div>
       </section>
 
-      <!-- DEPLOY -->
+      <!-- LOGY -->
       <section class="card">
         <div class="card-header">
           <div class="left">
-            <div class="label">Nasazení</div>
-            <h2>Deploy & údržba</h2>
+            <div class="label">Runtime</div>
+            <h2>Logy & stav</h2>
             <div class="desc">
-              “git add / commit / push” + reload configu v běžícím botu.
-              Reload už jede, git push je zatím mock.
+              Poslední výpis z běžící instance bota (paměť procesů).
             </div>
           </div>
         </div>
 
         <div class="mini-card">
           <div class="field">
-            <label>Akce</label>
+            <label>Debug</label>
             <div class="field-row" style="flex-wrap:wrap;gap:8px;">
-              <button class="btn sec" onclick="doReloadConfig()">Reload config v botovi</button>
-              <button class="btn" onclick="publishChanges()">Publish (git push)</button>
+              <button class="btn sec" onclick="openLogs()">Zobrazit logy</button>
             </div>
-            <div class="hint">Publish = commitne config.json zpátky do repa a Render pak udělá redeploy.</div>
+            <div class="hint">Tohle nejsou starý deploy logy z Renderu, ale živý logy, co bot sám loguje.</div>
           </div>
         </div>
       </section>
 
     </aside>
+  </div>
+
+  <!-- LOG MODAL -->
+  <div id="logModalBackdrop" class="log-modal-backdrop">
+    <div class="log-modal">
+      <div class="log-modal-header">
+        <h3>Server log (poslední běh)</h3>
+        <button class="log-close-btn" onclick="closeLogs()">Zavřít</button>
+      </div>
+      <div class="log-modal-body">
+        <pre id="logModalContent">Načítám…</pre>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1184,7 +1258,7 @@
       loadInitial();
     }
 
-    // AVATAR PREVIEW + upload mock
+    // AVATAR PREVIEW + upload
     const avatarInput = document.getElementById('avatarInput');
     avatarInput.addEventListener('change', () => {
       const file = avatarInput.files[0];
@@ -1199,79 +1273,61 @@
     });
 
     function uploadAvatar(){
-  const file = avatarInput.files[0];
-  if (!file) {
-    alert("Nejdřív vyber obrázek 💀");
-    return;
-  }
+      const file = avatarInput.files[0];
+      if (!file) {
+        alert("Nejdřív vyber obrázek 💀");
+        return;
+      }
 
-  const formData = new FormData();
-  // "avatarFile" se MUSÍ jmenovat stejně jako upload.single("avatarFile") v index.js
-  formData.append("avatarFile", file);
+      const formData = new FormData();
+      // "avatarFile" se MUSÍ jmenovat stejně jako upload.single("avatarFile") v index.js
+      formData.append("avatarFile", file);
 
-  fetch("/upload-avatar", {
-    method: "POST",
-    body: formData
-  })
-  .then(r => r.json())
-  .then(resp => {
-    if (resp.ok) {
-      alert("✅ Avatar změněn!");
-      loadInitial(); // refreshneme preview
-    } else {
-      alert("❌ Avatar se nepodařilo změnit: " + (resp.error || "neznámá chyba"));
-    }
-  })
-  .catch(err => {
-    console.error(err);
-    alert("❌ Nepovedlo se spojit se serverem (/upload-avatar).");
-  });
-}
-
-    // Deploy / reload tlačítka
-    function doReloadConfig(){
-      fetch("/reload-config", { method: "POST" })
-        .then(r => r.json())
-        .then(resp => {
-          if (resp.ok) {
-            alert("♻️ Reloadnuto v běžícím botovi");
-            loadInitial();
-          } else {
-            alert("❌ Reload selhal");
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          alert("❌ Nepovedlo se zavolat /reload-config");
-        });
+      fetch("/upload-avatar", {
+        method: "POST",
+        body: formData
+      })
+      .then(r => r.json())
+      .then(resp => {
+        if (resp.ok) {
+          alert("✅ Avatar změněn!");
+          loadInitial(); // refreshneme preview
+        } else {
+          alert("❌ Avatar se nepodařilo změnit: " + (resp.error || "neznámá chyba"));
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Nepovedlo se spojit se serverem (/upload-avatar).");
+      });
     }
 
-    function publishChanges(){
-  const secret = prompt("Zadej publish heslo (secret):");
-  if (!secret) {
-    alert("Publish zrušen 😔");
-    return;
-  }
+    // LOG MODAL
+    async function openLogs() {
+      const backdrop = document.getElementById('logModalBackdrop');
+      const pre = document.getElementById('logModalContent');
+      pre.textContent = "Načítám…";
 
-  fetch("/publish", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret })
-  })
-  .then(r => r.json())
-  .then(resp => {
-    if (resp.ok) {
-      alert("🚀 Hotovo: config.json commitnutej & pushnutej na repo.\n" +
-            "Render by si to měl při dalším redeployi natáhnout.");
-    } else {
-      alert("❌ Publish fail: " + (resp.error || "neznámá chyba"));
+      try {
+        const res = await fetch("/logs");
+        if (!res.ok) {
+          pre.textContent = "❌ Nepodařilo se načíst logy.";
+        } else {
+          const text = await res.text();
+          pre.textContent = text || "(prázdný log)";
+        }
+      } catch (err) {
+        console.error(err);
+        pre.textContent = "❌ Chyba při fetchi /logs.";
+      }
+
+      backdrop.style.display = "flex";
     }
-  })
-  .catch(err => {
-    console.error(err);
-    alert("❌ Nepovedlo se spojit se serverem (/publish).");
-  });
-}
+
+    function closeLogs() {
+      const backdrop = document.getElementById('logModalBackdrop');
+      backdrop.style.display = "none";
+    }
 
     // init page load
     loadInitial();
