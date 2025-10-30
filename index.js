@@ -12,7 +12,10 @@ import {
   REST,
   Routes,
   SlashCommandBuilder,
-  PermissionFlagsBits
+  PermissionFlagsBits,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } from "discord.js";
 
 dotenv.config();
@@ -91,6 +94,24 @@ function withShortLock(set, key, ttlMs) {
   return false;
 }
 
+// === [2] SADA HERNÍCH ROLÍ PRO STATISTIKY + TLAČÍTKA ===
+const GAME_ROLE_IDS = [
+  "1433504172296245278", // WildRift
+  "1433504443269255399", // LOCKDOWN
+  "1433504552140673105", // Warzone
+  "1433504646357586062", // Metin2
+  "1433504694529167360", // CS:2
+];
+
+// Pro mapování tlačítek -> role
+const BUTTON_ROLE_MAP = {
+  "pickgame:wildrift": "1433504172296245278",
+  "pickgame:warzone": "1433504552140673105",
+  "pickgame:metin2": "1433504646357586062",
+  "pickgame:cs2": "1433504694529167360",
+  "pickgame:lockdown": "1433504443269255399",
+};
+
 // postaví mapu emoji -> roleId z config.reactionRoles.emojiRoleMap
 function buildEmojiRoleMap() {
   const map = {};
@@ -150,7 +171,8 @@ async function syncReactionRoleMessage() {
     const embed = new EmbedBuilder()
       .setTitle(rrEmbedCfg.title || "Role výběr")
       .setDescription(rrEmbedCfg.description || "")
-      .setColor(rrEmbedCfg.color || "#29AC5F");
+      // [1] DEFAULT BARVA PŘEPNUTÁ NA ČERVENOU
+      .setColor(rrEmbedCfg.color || "#FF0000");
 
     if (rrEmbedCfg.thumbnailUrl) {
       embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
@@ -574,30 +596,51 @@ client.on("guildMemberAdd", async member => {
     await member.roles.add(unverifiedRoleId).catch(() => {});
     console.log(`👤 ${member.user.tag} dostal roli Unverified`);
 
-    // 1) veřejný welcome embed do nazdarChannelId
+    // 1) veřejný welcome embed do nazdarChannelId (ID: 1400569915437748254)
     {
-      const welcomeCfg = config.welcomeFlow.greetingEmbed;
-      const welcomeEmbedChannel = member.guild.channels.cache.get(
-        config.channelsAndRoles.nazdarChannelId
-      );
-      if (welcomeEmbedChannel) {
-        const welcomeEmbed = new EmbedBuilder()
-          .setTitle(welcomeCfg.title)
-          .setDescription(
-            fillTemplate(welcomeCfg.description, {
-              USER: `${member}`
-            })
-          )
-          .setColor(welcomeCfg.color || "#FF0000")
-          .setThumbnail(
-            member.user.displayAvatarURL({ dynamic: true })
-          );
+      const welcomeChannelIdHard = "1400569915437748254";
+      const welcomeEmbedChannel =
+        member.guild.channels.cache.get(welcomeChannelIdHard) ||
+        member.guild.channels.cache.get(config.channelsAndRoles.nazdarChannelId);
 
-        await welcomeEmbedChannel.send({ embeds: [welcomeEmbed] });
+      if (welcomeEmbedChannel) {
+        const embed = new EmbedBuilder()
+          .setTitle("Vítej!")
+          .setDescription(
+            `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko kvůli jaké hře jsi tu!`
+          )
+          .setColor("#FF0000")
+          .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
+
+        // [3] ActionRow s 5 tlačítky (Discord má jen 4 barvy; páté je Secondary)
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("pickgame:wildrift")
+            .setLabel("🎮WildRift")
+            .setStyle(ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId("pickgame:warzone")
+            .setLabel("🔫Warzone")
+            .setStyle(ButtonStyle.Danger),
+          new ButtonBuilder()
+            .setCustomId("pickgame:metin2")
+            .setLabel("⚔️Metin2")
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId("pickgame:cs2")
+            .setLabel("🔫CS:2")
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId("pickgame:lockdown")
+            .setLabel("☣️LOCKDOWN")
+            .setStyle(ButtonStyle.Secondary)
+        );
+
+        await welcomeEmbedChannel.send({ embeds: [embed], components: [row] });
       }
     }
 
-    // 2) verifikační otázka do welcomeChannelId
+    // 2) verifikační otázka do welcomeChannelId (původní flow beze změny)
     const verifyChannel = member.guild.channels.cache.get(
       config.channelsAndRoles.welcomeChannelId
     );
@@ -863,17 +906,16 @@ setInterval(async () => {
     if (!guild) return;
     await guild.members.fetch();
 
+    // [2] NOVÁ LOGIKA: počítat uživatele s alespoň jednou z pěti „game“ rolí
     const memberCount = guild.members.cache.filter(m => {
-      return (
-        !m.user.bot &&
-        m.id !== config.channelsAndRoles.fallenPhoenixId &&
-        !m.roles.cache.has(config.channelsAndRoles.unverifiedRoleId)
-      );
+      if (m.user.bot) return false;
+      if (m.id === config.channelsAndRoles.fallenPhoenixId) return false;
+      return GAME_ROLE_IDS.some(rid => m.roles.cache.has(rid));
     }).size;
 
     if (memberCount !== lastMemberCount) {
       const ch = guild.channels.cache.get(
-        config.channelsAndRoles.memberStatsChannelId
+        config.channelsAndRoles.memberStatsChannelId // = 1429158078980423913
       );
       if (ch) {
         await ch
@@ -916,79 +958,140 @@ setInterval(async () => {
   }
 }, 35000);
 
-// === /clear + /ban ===
+// === /clear + /ban + [3] BUTTON HANDLER ===
 client.on("interactionCreate", async i => {
-  if (!i.isChatInputCommand()) return;
+  if (i.isChatInputCommand()) {
+    // /clear
+    if (i.commandName === "clear") {
+      const count = i.options.getInteger("pocet");
+      if (count < 1 || count > 100) {
+        return i.reply({
+          content: "⚠️ Zadej číslo 1–100!",
+          flags: 64
+        });
+      }
 
-  // /clear
-  if (i.commandName === "clear") {
-    const count = i.options.getInteger("pocet");
-    if (count < 1 || count > 100) {
-      return i.reply({
-        content: "⚠️ Zadej číslo 1–100!",
-        flags: 64
-      });
-    }
-
-    try {
-      const deleted = await i.channel.bulkDelete(count, true);
-      await i.reply({
-        content: `✅ Smazáno ${deleted.size} zpráv`,
-        flags: 64
-      });
-      setTimeout(() => i.deleteReply().catch(() => {}), 1000);
-    } catch (err) {
-      if (err.code === 10008) {
-        console.log(
-          "⚠️ Některé zprávy už byly smazány dřív, přeskočeno."
-        );
-      } else {
-        console.error("❌ Chyba při mazání zpráv:", err);
+      try {
+        const deleted = await i.channel.bulkDelete(count, true);
+        await i.reply({
+          content: `✅ Smazáno ${deleted.size} zpráv`,
+          flags: 64
+        });
+        setTimeout(() => i.deleteReply().catch(() => {}), 1000);
+      } catch (err) {
+        if (err.code === 10008) {
+          console.log(
+            "⚠️ Některé zprávy už byly smazány dřív, přeskočeno."
+          );
+        } else {
+          console.error("❌ Chyba při mazání zpráv:", err);
+        }
       }
     }
+
+    // /ban
+    if (i.commandName === "ban") {
+      const userId = i.options.getString("userid");
+      const reason = i.options.getString("duvod") || "Bez důvodu";
+      try {
+        const guild = i.guild;
+        await guild.bans.create(userId, { reason });
+
+        await i.reply({
+          content: `✅ Uživatel <@${userId}> byl zabanován.`,
+          flags: 64
+        });
+        setTimeout(() => i.deleteReply().catch(() => {}), 1000);
+
+        // log do onlineLogChannelId
+        const logCh = guild.channels.cache.get(
+          config.channelsAndRoles.onlineLogChannelId
+        );
+        if (logCh) {
+          const banLogCfg = config.banCommandLog;
+          const embed = new EmbedBuilder()
+            .setTitle(banLogCfg.title)
+            .setDescription(
+              fillTemplate(banLogCfg.descriptionTemplate, {
+                USER: `<@${userId}>`,
+                USER_ID: userId,
+                MOD: `<@${i.user.id}>`,
+                REASON: reason
+              })
+            )
+            .setColor(banLogCfg.color || "#FF0000");
+
+          await logCh.send({ embeds: [embed] });
+        }
+      } catch (err) {
+        console.error("❌ Chyba při /ban:", err);
+        await i.reply({
+          content: `⚠️ Nepodařilo se zabanovat uživatele s ID ${userId}`,
+          flags: 64
+        });
+        setTimeout(() => i.deleteReply().catch(() => {}), 2000);
+      }
+    }
+
+    return; // konec chat input commandů
   }
 
-  // /ban
-  if (i.commandName === "ban") {
-    const userId = i.options.getString("userid");
-    const reason = i.options.getString("duvod") || "Bez důvodu";
+  // [3] Button handler – výběr hry/role (povolený jen 1 výběr)
+  if (i.isButton() && i.customId.startsWith("pickgame:")) {
     try {
-      const guild = i.guild;
-      await guild.bans.create(userId, { reason });
+      const roleId = BUTTON_ROLE_MAP[i.customId];
+      if (!roleId) {
+        await i.reply({ content: "⚠️ Neznámé tlačítko.", ephemeral: true });
+        setTimeout(() => i.deleteReply().catch(() => {}), 1500);
+        return;
+      }
 
+      const member = await i.guild.members.fetch(i.user.id).catch(() => null);
+      if (!member) {
+        await i.reply({ content: "⚠️ Nepodařilo se načíst tvůj profil.", ephemeral: true });
+        setTimeout(() => i.deleteReply().catch(() => {}), 1500);
+        return;
+      }
+
+      // Pokud už má některou z „game“ rolí, další výběr nepovolíme
+      const alreadyHasAny = GAME_ROLE_IDS.some(r => member.roles.cache.has(r));
+      if (alreadyHasAny) {
+        await i.reply({
+          content: "❗ Už sis jednou vybral/a. Další změna není povolená.",
+          ephemeral: true
+        });
+        setTimeout(() => i.deleteReply().catch(() => {}), 1500);
+        return;
+      }
+
+      // Přidat vybranou roli a pro jistotu odebrat ostatní z téhle pětice (mělo by být zbytečné, ale ať je to čisté)
+      await member.roles.add(roleId).catch(() => {});
+      for (const rid of GAME_ROLE_IDS) {
+        if (rid !== roleId && member.roles.cache.has(rid)) {
+          await member.roles.remove(rid).catch(() => {});
+        }
+      }
+
+// Odebrat „zámek“ roli po výběru (aby už viděl zbytek serveru)
+await member.roles.remove("1428624557635407902").catch(() => {});
+
+      // Ephemeral potvrzení a rychlý autodelete jako u příkazů
       await i.reply({
-        content: `✅ Uživatel <@${userId}> byl zabanován.`,
-        flags: 64
+        content: "✅ Role byla přidělena.",
+        ephemeral: true
       });
       setTimeout(() => i.deleteReply().catch(() => {}), 1000);
 
-      // log do onlineLogChannelId
-      const logCh = guild.channels.cache.get(
-        config.channelsAndRoles.onlineLogChannelId
-      );
-      if (logCh) {
-        const banLogCfg = config.banCommandLog;
-        const embed = new EmbedBuilder()
-          .setTitle(banLogCfg.title)
-          .setDescription(
-            fillTemplate(banLogCfg.descriptionTemplate, {
-              USER: `<@${userId}>`,
-              USER_ID: userId,
-              MOD: `<@${i.user.id}>`,
-              REASON: reason
-            })
-          )
-          .setColor(banLogCfg.color || "#FF0000");
+      // Tlačítka „skrýt po kliknutí“ pouze pro jednoho usera Discord neumí.
+      // (Nelze skrýt komponenty jen pro konkrétního uživatele bez smazání celé zprávy.)
+      // Funkčně je ale zajištěno: po 1. volbě už další kliky neprojdou.
 
-        await logCh.send({ embeds: [embed] });
-      }
     } catch (err) {
-      console.error("❌ Chyba při /ban:", err);
-      await i.reply({
-        content: `⚠️ Nepodařilo se zabanovat uživatele s ID ${userId}`,
-        flags: 64
-      });
-      setTimeout(() => i.deleteReply().catch(() => {}), 2000);
+      console.error("❌ Button handler error:", err);
+      if (!i.replied) {
+        await i.reply({ content: "⚠️ Něco se pokazilo.", ephemeral: true });
+        setTimeout(() => i.deleteReply().catch(() => {}), 1500);
+      }
     }
   }
 });
