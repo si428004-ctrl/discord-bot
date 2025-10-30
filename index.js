@@ -1081,6 +1081,8 @@ await member.roles.remove("1428624557635407902").catch(() => {});
         ephemeral: true
       });
       setTimeout(() => i.deleteReply().catch(() => {}), 1000);
+// 🧹 Odstranit tlačítka z původní zprávy (ponechat embed)
+await i.message.edit({ components: [] }).catch(() => {});
 
       // Tlačítka „skrýt po kliknutí“ pouze pro jednoho usera Discord neumí.
       // (Nelze skrýt komponenty jen pro konkrétního uživatele bez smazání celé zprávy.)
