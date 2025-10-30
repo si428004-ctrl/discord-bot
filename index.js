@@ -605,9 +605,9 @@ client.on("guildMemberAdd", async member => {
 
       if (welcomeEmbedChannel) {
         const embed = new EmbedBuilder()
-          .setTitle("Vítej!")
+          .setTitle("N A Z D A R !")
           .setDescription(
-            `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko kvůli jaké hře jsi tu!`
+            `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko kvůli hru, kvůli které jsi tu!`
           )
           .setColor("#FF0000")
           .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));

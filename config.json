@@ -1,7 +1,7 @@
 {
   "botIdentity": {
     "displayName": "Fallen Phoenix",
-    "statusText": "🔥 Ready to burn"
+    "statusText": ""
   },
   "channelsAndRoles": {
     "guildId": "1400568910176194600",
@@ -20,7 +20,7 @@
   "welcomeFlow": {
     "greetingEmbed": {
       "title": "N A Z D A R !",
-      "description": "Vítej {USER}! Nechovej se tu jako píča prosím. Díky! 🤍\nA skoč si vybrat roli do 🌀︱ʀᴏʟᴇ-sᴇʟᴇᴄᴛɪᴏɴ!",
+      "description": "Vítej {USER}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!",
       "color": "#FF0000"
     },
     "verifyQuestionText": "Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?",
