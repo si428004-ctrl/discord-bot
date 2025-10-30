@@ -43,7 +43,7 @@
     "embed": {
       "title": "Jakou linku mainíš?",
       "description": "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!",
-      "color": "#29AC5F",
+      "color": "#FF0000",
       "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/League_of_Legends_Wild_Rift_logo.svg/1280px-League_of_Legends_Wild_Rift_logo.svg.png",
       "imageUrl": "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
     },

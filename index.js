@@ -101,6 +101,7 @@ const GAME_ROLE_IDS = [
   "1433504552140673105", // Warzone
   "1433504646357586062", // Metin2
   "1433504694529167360", // CS:2
+  "1400578107823489024", // Creator
 ];
 
 // Pro mapování tlačítek -> role
@@ -171,8 +172,7 @@ async function syncReactionRoleMessage() {
     const embed = new EmbedBuilder()
       .setTitle(rrEmbedCfg.title || "Role výběr")
       .setDescription(rrEmbedCfg.description || "")
-      // [1] DEFAULT BARVA PŘEPNUTÁ NA ČERVENOU
-      .setColor(rrEmbedCfg.color || "#FF0000");
+      .setColor("#FF0000"); // vždy červená, config už barvu neovlivní
 
     if (rrEmbedCfg.thumbnailUrl) {
       embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
