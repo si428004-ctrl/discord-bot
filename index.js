@@ -1081,8 +1081,19 @@ await member.roles.remove("1428624557635407902").catch(() => {});
         ephemeral: true
       });
       setTimeout(() => i.deleteReply().catch(() => {}), 1000);
-// 🧹 Odstranit tlačítka z původní zprávy (ponechat embed)
-await i.message.edit({ components: [] }).catch(() => {});
+
+// 🧹 Odstranit tlačítka a změnit text embedu po výběru
+const oldEmbed = i.message.embeds[0];
+if (oldEmbed) {
+  const updatedEmbed = EmbedBuilder.from(oldEmbed)
+    .setDescription(
+      `Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍`
+    );
+
+  await i.message
+    .edit({ embeds: [updatedEmbed], components: [] })
+    .catch(() => {});
+}
 
       // Tlačítka „skrýt po kliknutí“ pouze pro jednoho usera Discord neumí.
       // (Nelze skrýt komponenty jen pro konkrétního uživatele bez smazání celé zprávy.)
