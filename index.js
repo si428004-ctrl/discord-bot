@@ -182,34 +182,64 @@ async function syncReactionRoleMessage() {
     }
 
     if (existing) {
-      // zpráva už tam je -> jen ji editnem aby měla novej text/barvu/obr
-      await existing.edit({ embeds: [embed] }).catch(err => {
-        console.warn("⚠️ syncReactionRoleMessage: nemůžu editnout message:", err.message);
-      });
+  // porovnej jen podstatné části embedu a edituj JEN když se liší
+  const cur = existing.embeds?.[0];
 
-      // a zkusíme přidat emoji z configu (když přibyly nový)
-      for (const entry of config.reactionRoles.emojiRoleMap || []) {
-        const e = entry.emoji;
-        if (!e) continue;
-        existing.react(e).catch(() => {});
-      }
+  // aktuální hodnoty v existující zprávě
+  const curTitle = cur?.title || "";
+  const curDesc  = cur?.description || "";
+  const curThumb = cur?.thumbnail?.url || "";
+  const curImg   = cur?.image?.url || "";
+  const curColor = (cur?.color ?? null); // číslo (int) nebo null
 
-      console.log("🔁 Reaction role embed aktualizován (edit).");
-    } else {
-      // žádná naše zpráva → pošleme novou
-      const sent = await channel.send({ embeds: [embed] });
+  // požadované hodnoty
+  const wantTitle = rrEmbedCfg.title || "Role výběr";
+  const wantDesc  = rrEmbedCfg.description || "";
+  const wantThumb = rrEmbedCfg.thumbnailUrl || "";
+  const wantImg   = rrEmbedCfg.imageUrl || "";
+  const wantColorHex = (rrEmbedCfg.color || "#FF0000").replace("#","");
+  const wantColorInt = parseInt(wantColorHex, 16);
 
-      // přidáme všechny emoji/reakce z configu
-      for (const entry of config.reactionRoles.emojiRoleMap || []) {
-        const e = entry.emoji;
-        if (!e) continue;
-        await sent.react(e).catch(err => {
-          console.warn("⚠️ Reakce se nepodařila:", e, err.message);
-        });
-      }
+  const needsUpdate =
+    curTitle !== wantTitle ||
+    curDesc  !== wantDesc  ||
+    curThumb !== wantThumb ||
+    curImg   !== wantImg   ||
+    (typeof curColor === "number" ? curColor : null) !== wantColorInt;
 
-      console.log("✅ Reaction role embed poslán + emoji přidány.");
+  if (needsUpdate) {
+    await existing.edit({ embeds: [embed] }).catch(err => {
+      console.warn("⚠️ syncReactionRoleMessage: nemůžu editnout message:", err.message);
+    });
+    console.log("🔁 Reaction role embed aktualizován (edit, změna zjištěna).");
+  } else {
+    console.log("👌 Reaction role embed beze změny – žádný edit neproběhl.");
+  }
+
+  // doplnit případně chybějící reakce, ale nereagovat duplicitně
+  const needed = (config.reactionRoles.emojiRoleMap || []).map(e => e.emoji).filter(Boolean);
+  for (const e of needed) {
+    const already = existing.reactions?.cache?.some(r =>
+      r.emoji.toString() === e
+    );
+    if (!already) {
+      await existing.react(e).catch(() => {});
     }
+  }
+
+} else {
+  // žádná naše zpráva → pošleme novou
+  const sent = await channel.send({ embeds: [embed] });
+  for (const entry of config.reactionRoles.emojiRoleMap || []) {
+    const e = entry.emoji;
+    if (!e) continue;
+    await sent.react(e).catch(err => {
+      console.warn("⚠️ Reakce se nepodařila:", e, err.message);
+    });
+  }
+  console.log("✅ Reaction role embed poslán + emoji přidány.");
+}
+
   } catch (err) {
     console.warn("⚠️ syncReactionRoleMessage fail:", err.message);
   }
@@ -517,7 +547,7 @@ app.listen(PORT, () =>
 // =====================
 
 // === READY EVENT ===
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   console.log(`✅ Přihlášen jako ${client.user.tag}`);
 
   // po přihlášení ping do onlineLogChannelId
