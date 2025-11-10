@@ -193,9 +193,9 @@ async function syncReactionRoleMessage() {
     if (rrEmbedCfg.thumbnailUrl) {
       embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
     }
-    if (rrEmbedCfg.imageUrl) {
-      embed.setImage(rrEmbedCfg.imageUrl);
-    }
+   // if (rrEmbedCfg.imageUrl) {
+   // embed.setImage(rrEmbedCfg.imageUrl);
+   // }
 
     if (existing) {
   // porovnej jen podstatné části embedu a edituj JEN když se liší
@@ -643,23 +643,21 @@ client.once("clientReady", async () => {
 
         if (!existingRankMsg) {
           const rankEmbed = new EmbedBuilder()
-            .setTitle("Jaký jsi rank ve hře?") // 👉 tady si pak můžeš text změnit
-            .setDescription(
-              [
-                "Vyber si svůj nejvýš dosažený rank, je jedno jaká season.",
-                "<:iron:1426288101604593846> <@&1437499734775562341>",
-                "<:bronze:1426287955227574472> <@&1437500038564544654>",
-                "<:silver:1426288167807615207> <@&1437490677771403515>",
-                "<:gold:1426288055240753272> <@&1437499870545182720>",
-                "<:platinum:1426288148886851704> <@&1437499938044116992>",
-                "<:emerald:1426288014845546576> <@&1437500189400371201>",
-                "<:diamond:1426287985145544817> <@&1437500095669997749>",
-                "<:master:1426288128607653888> <@&1437500235680186428>",
-                "<:grandmaster:1426288034382352544> <@&1437500283596050715>",
-                "<:challenger:1426288082507923467> <@&1437500351375867945>",
-                "<:sovereign:1426288186375667812> <@&1437500382313054432>",
-              ].join("\n")
-            )
+  .setTitle("Jaký jsi rank ve hře?")
+  .setDescription(
+    "Vyber si svůj nejvýš dosažený rank, je jedno jaká season.\n\n" + // ⬅ dvakrát \n = prázdný řádek
+    "<:iron:1426288101604593846> <@&1437499734775562341>\n" +
+    "<:bronze:1426287955227574472> <@&1437500038564544654>\n" +
+    "<:silver:1426288167807615207> <@&1437490677771403515>\n" +
+    "<:gold:1426288055240753272> <@&1437499870545182720>\n" +
+    "<:platinum:1426288148886851704> <@&1437499938044116992>\n" +
+    "<:emerald:1426288014845546576> <@&1437500189400371201>\n" +
+    "<:diamond:1426287985145544817> <@&1437500095669997749>\n" +
+    "<:master:1426288128607653888> <@&1437500235680186428>\n" +
+    "<:grandmaster:1426288034382352544> <@&1437500283596050715>\n" +
+    "<:challenger:1426288082507923467> <@&1437500351375867945>\n" +
+    "<:sovereign:1426288186375667812> <@&1437500382313054432>"
+  )
             .setColor("#FF0000")
             .setThumbnail("https://static.wikia.nocookie.net/leagueoflegends/images/3/38/Season_2019_-_Unranked.png/revision/latest/scale-to-width-down/250?cb=20190908074432"); 
 
