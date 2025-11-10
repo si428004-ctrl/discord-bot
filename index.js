@@ -638,7 +638,7 @@ client.once("clientReady", async () => {
         const existingRankMsg = recent?.find(
           m =>
             m.author.id === client.user.id &&
-            m.embeds?.[0]?.title === "Vyber si svůj rank"
+            m.embeds?.[0]?.title === "Jaký jsi rank ve hře?"
         );
 
         if (!existingRankMsg) {
@@ -1023,7 +1023,17 @@ setInterval(async () => {
   try {
     const guild = client.guilds.cache.first();
     if (!guild) return;
-    await guild.members.fetch();
+
+    // 🔇 Tichý fetch s fallbackem
+    try {
+      await guild.members.fetch();
+    } catch (err) {
+      if (err.message?.includes("Members didn't arrive in time")) {
+        console.warn("⏱️ [Members] Timeout při fetchi – používám cache.");
+      } else {
+        console.warn("⚠️ [Members] Fetch error:", err.message);
+      }
+    }
 
     // [2] NOVÁ LOGIKA: počítat uživatele s alespoň jednou z pěti „game“ rolí
     const memberCount = guild.members.cache.filter(m => {
@@ -1052,7 +1062,17 @@ setInterval(async () => {
   try {
     const guild = client.guilds.cache.first();
     if (!guild) return;
-    await guild.members.fetch();
+
+    // 🔇 Tichý fetch s fallbackem
+    try {
+      await guild.members.fetch();
+    } catch (err) {
+      if (err.message?.includes("Members didn't arrive in time")) {
+        console.warn("⏱️ [Unverified] Timeout při fetchi – používám cache.");
+      } else {
+        console.warn("⚠️ [Unverified] Fetch error:", err.message);
+      }
+    }
 
     const count = guild.members.cache.filter(m => {
       return (
