@@ -647,17 +647,17 @@ client.once("clientReady", async () => {
             .setDescription(
               [
                 "Vyber si svůj nejvýš dosažený rank, je jedno jaká season.",
-                ":iron: @Iron",
-                ":bronze: @Bronze",
-                ":silver: @Silver",
-                ":gold: @Gold",
-                ":platinum: @Platinum",
-                ":emerald: @Emerald",
-                ":diamond: @Diamond",
-                ":master: @Master",
-                ":grandmaster: @Grandmaster",
-                ":challenger: @Challenger",
-                ":sovereign: @Sovereign",
+                "<:iron:1426288101604593846> <@&1437499734775562341>",
+                "<:bronze:1426287955227574472> <@&1437500038564544654>",
+                "<:silver:1426288167807615207> <@&1437490677771403515>",
+                "<:gold:1426288055240753272> <@&1437499870545182720>",
+                "<:platinum:1426288148886851704> <@&1437499938044116992>",
+                "<:emerald:1426288014845546576> <@&1437500189400371201>",
+                "<:diamond:1426287985145544817> <@&1437500095669997749>",
+                "<:master:1426288128607653888> <@&1437500235680186428>",
+                "<:grandmaster:1426288034382352544> <@&1437500283596050715>",
+                "<:challenger:1426288082507923467> <@&1437500351375867945>",
+                "<:sovereign:1426288186375667812> <@&1437500382313054432>",
               ].join("\n")
             )
             .setColor("#FF0000")
