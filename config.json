@@ -47,11 +47,11 @@
     "thumbnailUrl": "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
   },
     "emojiRoleMap": [
-      { "emoji": "<:ADC:1437486605110874216>", "label": "ADC", "roleId": "1423292319150506066" },
       { "emoji": "<:Toplane:1437486878591815692>", "label": "TOP", "roleId": "1423293095319048202" },
-      { "emoji": "<:Support:1437484421753213021>", "label": "SUPPORT", "roleId": "1423292503112814662" },
       { "emoji": "<:Jungle:1437486704469610528>", "label": "JUNGLE", "roleId": "1423292924925575280" },
-      { "emoji": "<:MID:1437486787315634296>", "label": "MID", "roleId": "1423292659572674570" }
+      { "emoji": "<:MID:1437486787315634296>", "label": "MID", "roleId": "1423292659572674570" },
+      { "emoji": "<:ADC:1437486605110874216>", "label": "ADC", "roleId": "1423292319150506066" },
+      { "emoji": "<:Support:1437484421753213021>", "label": "SUPPORT", "roleId": "1423292503112814662" }
     ]
   },
   "leaveBanLogs": {
