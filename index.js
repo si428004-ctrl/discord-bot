@@ -660,7 +660,7 @@ client.once("clientReady", async () => {
                 ":sovereign: @Sovereign",
               ].join("\n")
             )
-            .setColor("#FF0000");
+            .setColor("#FF0000")
             .setThumbnail("https://static.wikia.nocookie.net/leagueoflegends/images/3/38/Season_2019_-_Unranked.png/revision/latest/scale-to-width-down/250?cb=20190908074432"); 
 
           const sentRankMsg = await roleSelectChannel.send({
