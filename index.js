@@ -113,6 +113,22 @@ const BUTTON_ROLE_MAP = {
   "pickgame:lockdown": "1433504443269255399",
 };
 
+// === [3] RANK ROLE MAP (emoji -> roleId) ===
+const RANK_EMOJI_ROLE_MAP = {
+  "<:iron:1426288101604593846>":       "1437499734775562341",
+  "<:bronze:1426287955227574472>":     "1437500038564544654",
+  "<:silver:1426288167807615207>":     "1437490677771403515",
+  "<:gold:1426288055240753272>":       "1437499870545182720",
+  "<:platinum:1426288148886851704>":   "1437499938044116992",
+  "<:emerald:1426288014845546576>":    "1437500189400371201",
+  "<:diamond:1426287985145544817>":    "1437500095669997749",
+  "<:master:1426288128607653888>":     "1437500235680186428",
+  "<:grandmaster:1426288034382352544>":"1437500283596050715",
+  "<:challenger:1426288082507923467>": "1437500351375867945",
+  "<:sovereign:1426288186375667812>":  "1437500382313054432",
+};
+
+
 // postaví mapu emoji -> roleId z config.reactionRoles.emojiRoleMap
 function buildEmojiRoleMap() {
   const map = {};
@@ -600,11 +616,77 @@ client.once("clientReady", async () => {
     ),
     { body: commands }
   );
-  console.log("✅ Slash commands /clear a /ban zaregistrovány.");
+    console.log("✅ Slash commands /clear a /ban zaregistrovány.");
 
   // 🔁 Syncni / refreshni reaction role embed teď při startu
   await syncReactionRoleMessage();
+
+  // 🔹 RANK SELECTION EMBED – druhá embed zpráva v roleSelectChannel
+  try {
+    const roleSelectChannelId = config.channelsAndRoles?.roleSelectChannelId;
+    if (roleSelectChannelId) {
+      const roleSelectChannel = await client.channels
+        .fetch(roleSelectChannelId)
+        .catch(() => null);
+
+      if (roleSelectChannel) {
+        // koukneme, jestli už tam není naše rank zpráva (podle title)
+        const recent = await roleSelectChannel.messages
+          .fetch({ limit: 20 })
+          .catch(() => null);
+
+        const existingRankMsg = recent?.find(
+          m =>
+            m.author.id === client.user.id &&
+            m.embeds?.[0]?.title === "Vyber si svůj rank"
+        );
+
+        if (!existingRankMsg) {
+          const rankEmbed = new EmbedBuilder()
+            .setTitle("Jaký jsi rank ve hře?") // 👉 tady si pak můžeš text změnit
+            .setDescription(
+              [
+                "Vyber si svůj nejvýš dosažený rank, je jedno jaká season.",
+                ":iron: @Iron",
+                ":bronze: @Bronze",
+                ":silver: @Silver",
+                ":gold: @Gold",
+                ":platinum: @Platinum",
+                ":emerald: @Emerald",
+                ":diamond: @Diamond",
+                ":master: @Master",
+                ":grandmaster: @Grandmaster",
+                ":challenger: @Challenger",
+                ":sovereign: @Sovereign",
+              ].join("\n")
+            )
+            .setColor("#FF0000");
+            .setThumbnail("https://static.wikia.nocookie.net/leagueoflegends/images/3/38/Season_2019_-_Unranked.png/revision/latest/scale-to-width-down/250?cb=20190908074432"); 
+
+          const sentRankMsg = await roleSelectChannel.send({
+            embeds: [rankEmbed],
+          });
+
+          // 🎯 Reakce pro všechny rank emoji (MUSÍ sedět na RANK_EMOJI_ROLE_MAP výše)
+          await sentRankMsg.react("<:iron:1426288101604593846>");
+          await sentRankMsg.react("<:bronze:1426287955227574472>");
+          await sentRankMsg.react("<:silver:1426288167807615207>");
+          await sentRankMsg.react("<:gold:1426288055240753272>");
+          await sentRankMsg.react("<:platinum:1426288148886851704>");
+          await sentRankMsg.react("<:emerald:1426288014845546576>");
+          await sentRankMsg.react("<:diamond:1426287985145544817>");
+          await sentRankMsg.react("<:master:1426288128607653888>");
+          await sentRankMsg.react("<:grandmaster:1426288034382352544>");
+          await sentRankMsg.react("<:challenger:1426288082507923467>");
+          await sentRankMsg.react("<:sovereign:1426288186375667812>");
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("⚠️ Nepodařilo se odeslat rank výběr embed:", err.message);
+  }
 });
+
 
 // === 🟢 Nový člen join ===
 client.on("guildMemberAdd", async member => {
@@ -757,14 +839,18 @@ client.on("messageReactionAdd", async (reaction, user) => {
     const rk = `add:${message.id}:${reaction.emoji.identifier}:${user.id}`;
     if (withShortLock(processedReactions, rk, 2000)) return;
 
-    // 1) reaction roles
+       // 1) reaction roles (lajny z configu + ranky z RANK_EMOJI_ROLE_MAP)
     if (
       message.channelId ===
       config.channelsAndRoles.roleSelectChannelId
     ) {
       const emojiKey = reaction.emoji.toString();
       const EMOJI_ROLE_MAP = buildEmojiRoleMap();
-      const roleId = EMOJI_ROLE_MAP[emojiKey];
+
+      // nejdřív lajny / jiné role z configu, pak rank role
+      const roleId =
+        EMOJI_ROLE_MAP[emojiKey] || RANK_EMOJI_ROLE_MAP[emojiKey];
+
       if (!roleId) return;
 
       const member = await message.guild.members
@@ -773,6 +859,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
       if (member) await member.roles.add(roleId).catch(() => {});
       return;
     }
+
 
     // 2) approve / reject mod log
     if (
@@ -861,15 +948,17 @@ client.on("messageReactionRemove", async (reaction, user) => {
     )
       return;
 
-    const emojiKey = reaction.emoji.toString();
+        const emojiKey = reaction.emoji.toString();
     const EMOJI_ROLE_MAP = buildEmojiRoleMap();
-    const roleId = EMOJI_ROLE_MAP[emojiKey];
+    const roleId =
+      EMOJI_ROLE_MAP[emojiKey] || RANK_EMOJI_ROLE_MAP[emojiKey];
     if (!roleId) return;
 
     const member = await message.guild.members
       .fetch(user.id)
       .catch(() => null);
     if (member) await member.roles.remove(roleId).catch(() => {});
+
   } catch (err) {
     console.error("⚠️ Chyba při messageReactionRemove:", err);
   }
