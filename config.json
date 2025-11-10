@@ -42,7 +42,7 @@
   "reactionRoles": {
   "embed": {
     "title": "Jakou linku mainíš?",
-    "description": "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!\n\n<:Toplane:1437486878591815692> <&1423293095319048202>\n<:Jungle:1437486704469610528> <&1423292924925575280>\n<:MID:1437486787315634296> <&1423292659572674570>\n<:ADC:1437486605110874216> <&1423292319150506066>\n<:Support:1437484421753213021> <&1423292503112814662>",
+    "description": "Vyber si dole z reakcí svou linku\na dostaň přidělenou roli!\n\n<:Toplane:1437486878591815692> TOP\n<:Jungle:1437486704469610528> JUNGLE\n<:MID:1437486787315634296> MID\n<:ADC:1437486605110874216> ADC\n<:Support:1437484421753213021> SUPPORT",
     "color": "#FF0000",
     "thumbnailUrl": "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
   },
