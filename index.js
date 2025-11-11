@@ -188,7 +188,7 @@ async function syncReactionRoleMessage() {
     const embed = new EmbedBuilder()
       .setTitle(rrEmbedCfg.title || "Role výběr")
       .setDescription(rrEmbedCfg.description || "")
-      .setColor("#FF0000"); // vždy červená, config už barvu neovlivní
+      .setColor("#3a3838"); // vždy červená, config už barvu neovlivní
 
     if (rrEmbedCfg.thumbnailUrl) {
       embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
@@ -213,7 +213,7 @@ async function syncReactionRoleMessage() {
   const wantDesc  = rrEmbedCfg.description || "";
   const wantThumb = rrEmbedCfg.thumbnailUrl || "";
   const wantImg   = rrEmbedCfg.imageUrl || "";
-  const wantColorHex = (rrEmbedCfg.color || "#FF0000").replace("#","");
+  const wantColorHex = (rrEmbedCfg.color || "#3a3838").replace("#","");
   const wantColorInt = parseInt(wantColorHex, 16);
 
   const needsUpdate =
@@ -658,7 +658,7 @@ client.once("clientReady", async () => {
     "<:challenger:1426288082507923467> <@&1437500351375867945>\n" +
     "<:sovereign:1426288186375667812> <@&1437500382313054432>"
   )
-            .setColor("#FF0000")
+            .setColor("#3a3838")
             .setThumbnail("https://static.wikia.nocookie.net/leagueoflegends/images/3/38/Season_2019_-_Unranked.png/revision/latest/scale-to-width-down/250?cb=20190908074432"); 
 
           const sentRankMsg = await roleSelectChannel.send({
@@ -719,7 +719,7 @@ client.on("guildMemberAdd", async member => {
           .setDescription(
             `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!`
           )
-          .setColor("#FF0000")
+          .setColor("#3a3838")
           .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
 
         // [3] ActionRow s 5 tlačítky (Discord má jen 4 barvy; páté je Secondary)
@@ -787,7 +787,7 @@ client.on("guildMemberAdd", async member => {
             ANSWER: msg.content || "*Žádná odpověď*"
           })
         )
-        .setColor(modLogCfg.color || "#ff0000");
+        .setColor(modLogCfg.color || "#3a3838");
 
       const logMsg = await logChannel.send({ embeds: [embed] });
 
