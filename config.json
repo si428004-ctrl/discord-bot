@@ -21,13 +21,13 @@
     "greetingEmbed": {
       "title": "N A Z D A R !",
       "description": "Vítej {USER}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!",
-      "color": "#FF0000"
+      "color": "#3a3838"
     },
     "verifyQuestionText": "Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?",
     "modLogEmbed": {
       "title": "🆕 Nový člen na serveru",
       "descriptionTemplate": "👤 **Uživatel:** {USER}\n📝 **Odpověď:**\n\n{ANSWER}",
-      "color": "#FF0000",
+      "color": "#3a3838",
       "approveMessage": {
         "textTemplate": "{USER} byl schválen uživatelem {MOD} ✅",
         "color": "#00FF00"
@@ -43,7 +43,7 @@
   "embed": {
     "title": "Jakou linku mainíš?",
     "description": "Vyber si dole z reakcí svou linku a dostaň přidělenou roli!\n\n<:Toplane:1437486878591815692>\u00A0- TOP\n<:Jungle:1437486704469610528>\u00A0- JUNGLE\n<:MID:1437486787315634296>\u00A0- MID\n<:ADC:1437486605110874216>\u00A0- ADC\n<:Support:1437484421753213021>\u00A0- SUPPORT",
-    "color": "#FF0000",
+    "color": "#3a3838",
     "thumbnailUrl": "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
   },
     "emojiRoleMap": [
