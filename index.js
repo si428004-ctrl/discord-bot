@@ -638,14 +638,14 @@ client.once("clientReady", async () => {
         const existingRankMsg = recent?.find(
           m =>
             m.author.id === client.user.id &&
-            m.embeds?.[0]?.title === "Jaký jsi rank ve hře?"
+            m.embeds?.[0]?.title === "HIGHEST ACHIEVED RANK"
         );
 
         if (!existingRankMsg) {
           const rankEmbed = new EmbedBuilder()
-  .setTitle("Jaký jsi rank ve hře?")
+  .setTitle("HIGHEST ACHIEVED RANK")
   .setDescription(
-    "Vyber si svůj nejvýš dosažený rank, je jedno jaká season.\n\n" + // ⬅ dvakrát \n = prázdný řádek
+    "Vyber si svůj nejvýš dosažený rank, je jedno jaká season.\n\nPick your highest achieved rank, no matter which season.\n\n" + // ⬅ dvakrát \n = prázdný řádek
     "<:iron:1426288101604593846> <@&1437499734775562341>\n" +
     "<:bronze:1426287955227574472> <@&1437500038564544654>\n" +
     "<:silver:1426288167807615207> <@&1437490677771403515>\n" +
@@ -715,9 +715,9 @@ client.on("guildMemberAdd", async member => {
 
       if (welcomeEmbedChannel) {
         const embed = new EmbedBuilder()
-          .setTitle("N A Z D A R !")
+          .setTitle("W E L C O M E !")
           .setDescription(
-            `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!`
+            `Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\nWelcome {USER}! Please don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!`
           )
           .setColor("#3a3838")
           .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
@@ -1224,7 +1224,7 @@ const oldEmbed = i.message.embeds[0];
 if (oldEmbed) {
   const updatedEmbed = EmbedBuilder.from(oldEmbed)
     .setDescription(
-      `Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍`
+      `Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍\n\nWelcome {USER}! Please don’t act like a pussy here, thanks! 🤍`
     );
 
   await i.message
