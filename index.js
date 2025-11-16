@@ -1062,15 +1062,16 @@ setInterval(async () => {
     if (!guild) return;
 
     // 🔇 Tichý fetch s fallbackem
-    try {
-      await guild.members.fetch();
-    } catch (err) {
-      if (err.message?.includes("Members didn't arrive in time")) {
-        console.warn("⏱️ [Unverified] Timeout při fetchi – používám cache.");
-      } else {
-        console.warn("⚠️ [Unverified] Fetch error:", err.message);
-      }
-    }
+try {
+  await guild.members.fetch();
+} catch (err) {
+  // Pokud timeout → prostě ticho a fallback na cache
+  if (err.message?.includes("Members didn't arrive in time")) {
+    // ticho
+  } else {
+    // a i ostatní chyby ignorujeme, není důvod to logovat
+  }
+}
 
     const count = guild.members.cache.filter(m => {
       return (
