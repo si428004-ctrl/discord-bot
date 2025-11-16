@@ -188,7 +188,8 @@ async function syncReactionRoleMessage() {
     const embed = new EmbedBuilder()
       .setTitle(rrEmbedCfg.title || "Role výběr")
       .setDescription(rrEmbedCfg.description || "")
-      .setColor("#3a3838"); // vždy červená, config už barvu neovlivní
+      .setColor("#3a3838") // vždy červená, config už barvu neovlivní
+      .setThumbnail(config.reactionRoles.embed.thumbnailUrl);
 
     if (rrEmbedCfg.thumbnailUrl) {
       embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
