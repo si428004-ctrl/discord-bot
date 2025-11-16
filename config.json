@@ -20,10 +20,10 @@
   "welcomeFlow": {
     "greetingEmbed": {
       "title": "W E L C O M E !",
-      "description": "cz Vítej {USER}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\nus Welcome {USER}! Please don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!",
+      "description": ":flag_cz: Vítej {USER}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome {USER}! Please don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!",
       "color": "#3a3838"
     },
-    "verifyQuestionText": "cz Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?\n\nus Hello {USER}, to approve you we need your answer. Where did you find our server and why do you want to join?",
+    "verifyQuestionText": ":flag_cz: Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?\n\n:flag_us: Hello {USER}, to approve you we need your answer. Where did you find our server and why do you want to join?",
     "modLogEmbed": {
       "title": "🆕 Nový člen na serveru",
       "descriptionTemplate": "👤 **Uživatel:** {USER}\n📝 **Odpověď:**\n\n{ANSWER}",
@@ -42,7 +42,7 @@
  "reactionRoles": {
   "embed": {
     "title": "Choose your line!",
-    "description": "cz Vyber si dole z reakcí svou linku a dostaň přidělenou roli!\n\nus Choose your lane below and get your assigned role!\n\n<:Toplane:1437486878591815692>\u00A0- TOP\n<:Jungle:1437486704469610528>\u00A0- JUNGLE\n<:MID:1437486787315634296>\u00A0- MID\n<:ADC:1437486605110874216>\u00A0- ADC\n<:Support:1437484421753213021>\u00A0- SUPPORT",
+    "description": ":flag_cz: Vyber si dole z reakcí svou linku a dostaň přidělenou roli!\n:flag_us: Choose your lane below and get your assigned role!\n\n<:Toplane:1437486878591815692>\u00A0- TOP\n<:Jungle:1437486704469610528>\u00A0- JUNGLE\n<:MID:1437486787315634296>\u00A0- MID\n<:ADC:1437486605110874216>\u00A0- ADC\n<:Support:1437484421753213021>\u00A0- SUPPORT",
     "color": "#3a3838",
     "thumbnailUrl": "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
   },
