@@ -717,7 +717,7 @@ client.on("guildMemberAdd", async member => {
         const embed = new EmbedBuilder()
           .setTitle("W E L C O M E !")
           .setDescription(
-            `:flag_cz: Vítej ${member}! Nechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome ${member}! Please don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!`
+            `:flag_cz: Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome ${member}!\nPlease don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!`
           )
           .setColor("#3a3838")
           .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
@@ -1225,7 +1225,7 @@ const oldEmbed = i.message.embeds[0];
 if (oldEmbed) {
   const updatedEmbed = EmbedBuilder.from(oldEmbed)
     .setDescription(
-      `:flag_cz: Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍\n\n:flag_us: Welcome ${member}! Please don’t act like a pussy here, thanks! 🤍`
+      `:flag_cz: Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍\n\n:flag_us: Welcome ${member}!\nPlease don’t act like a pussy here, thanks! 🤍`
     );
 
   await i.message
