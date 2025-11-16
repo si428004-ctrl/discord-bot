@@ -41,7 +41,7 @@
   },
  "reactionRoles": {
   "embed": {
-    "title": "Choose your line!",
+    "title": "CHOOSE YOUR LINE",
     "description": ":flag_cz: Vyber si dole z reakcí svou linku a dostaň přidělenou roli!\n:flag_us: Choose your lane below and get your assigned role!\n\n<:Toplane:1437486878591815692>\u00A0- TOP\n<:Jungle:1437486704469610528>\u00A0- JUNGLE\n<:MID:1437486787315634296>\u00A0- MID\n<:ADC:1437486605110874216>\u00A0- ADC\n<:Support:1437484421753213021>\u00A0- SUPPORT",
     "color": "#3a3838",
     "thumbnailUrl": "https://www.metasrc.com/legacy/images/lanes/mid_icon.png"
