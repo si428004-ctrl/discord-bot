@@ -186,14 +186,11 @@ async function syncReactionRoleMessage() {
 
     // postav nový embed podle configu
     const embed = new EmbedBuilder()
-      .setTitle(rrEmbedCfg.title || "Role výběr")
-      .setDescription(rrEmbedCfg.description || "")
-      .setColor("#3a3838") // vždy červená, config už barvu neovlivní
-      .setThumbnail(config.reactionRoles.embed.thumbnailUrl);
+  .setTitle(rrEmbedCfg.title || "Role výběr")
+  .setDescription(rrEmbedCfg.description || "")
+  .setColor(rrEmbedCfg.color || "#3a3838")
+  .setThumbnail(rrEmbedCfg.thumbnailUrl || "");
 
-    if (rrEmbedCfg.thumbnailUrl) {
-      embed.setThumbnail(rrEmbedCfg.thumbnailUrl);
-    }
    // if (rrEmbedCfg.imageUrl) {
    // embed.setImage(rrEmbedCfg.imageUrl);
    // }
