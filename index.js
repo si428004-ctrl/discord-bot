@@ -861,7 +861,7 @@ if (verifyEnabled) {
       );
     }
   });
-
+}
 // === 🧩 Reaction Add ===
 client.on("messageReactionAdd", async (reaction, user) => {
   try {
