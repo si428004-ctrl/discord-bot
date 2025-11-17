@@ -95,8 +95,7 @@ client.on('interactionCreate', async interaction => {
       config.verifyEnabled = false; 
       fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
 
-      await interaction.deferReply({ ephemeral: true });
-      await interaction.editReply('✅ Verify je teď OFF. Noví členové dostanou rovnou verified.');
+      await interaction.reply({ content: '✅ Verify je teď OFF. Noví členové dostanou rovnou verified.', flags: 64 });
     }
 
     if (interaction.commandName === 'startverify') {
@@ -104,15 +103,16 @@ client.on('interactionCreate', async interaction => {
       config.verifyEnabled = true; 
       fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
 
-      await interaction.deferReply({ ephemeral: true });
-      await interaction.editReply('✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.');
+      await interaction.reply({ content: '✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.', flags: 64 });
     }
   } catch (error) {
     console.error('Chyba při start/stop verify:', error);
+
+    // fallback reply jen pokud interakce ještě nebyla odpovězena
     if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({ content: '❌ Něco se pokazilo.', ephemeral: true });
-    } else {
-      await interaction.followUp({ content: '❌ Něco se pokazilo.', ephemeral: true });
+      try {
+        await interaction.reply({ content: '❌ Něco se pokazilo.', flags: 64 });
+      } catch {}
     }
   }
 });
