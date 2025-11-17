@@ -89,18 +89,31 @@ let verifyEnabled = config.verifyEnabled ?? true; // načteme z configu, pokud e
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'stopverify') {
-    verifyEnabled = false;
-    config.verifyEnabled = false; 
-    fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
-    await interaction.reply('✅ Verify je teď OFF. Noví členové dostanou rovnou verified.');
-  }
+  try {
+    if (interaction.commandName === 'stopverify') {
+      verifyEnabled = false;
+      config.verifyEnabled = false; 
+      fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
 
-  if (interaction.commandName === 'startverify') {
-    verifyEnabled = true;
-    config.verifyEnabled = true; 
-    fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
-    await interaction.reply('✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.');
+      await interaction.deferReply({ ephemeral: true });
+      await interaction.editReply('✅ Verify je teď OFF. Noví členové dostanou rovnou verified.');
+    }
+
+    if (interaction.commandName === 'startverify') {
+      verifyEnabled = true;
+      config.verifyEnabled = true; 
+      fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
+
+      await interaction.deferReply({ ephemeral: true });
+      await interaction.editReply('✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.');
+    }
+  } catch (error) {
+    console.error('Chyba při start/stop verify:', error);
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: '❌ Něco se pokazilo.', ephemeral: true });
+    } else {
+      await interaction.followUp({ content: '❌ Něco se pokazilo.', ephemeral: true });
+    }
   }
 });
 

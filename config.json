@@ -3,8 +3,8 @@
     "displayName": "C H Λ O S B O T",
     "statusText": ""
   },
-    "verifyEnabled": true,
-    "channelsAndRoles": {
+  "verifyEnabled": false,
+  "channelsAndRoles": {
     "guildId": "1400568910176194600",
     "welcomeChannelId": "1428862251162403019",
     "joinLogChannelId": "1428864324474114141",
@@ -40,24 +40,50 @@
     },
     "timeoutKickReason": "Neodpověděl na uvítací otázku během 24 hodin"
   },
- "reactionRoles": {
-  "embed": {
-    "title": "CHOOSE YOUR LINE",
-    "description": ":flag_cz: Vyber si dole z reakcí svou linku a dostaň přidělenou roli!\n:flag_us: Choose your lane below and get your assigned role!\n\n<:Toplane:1437486878591815692>\u00A0- TOP\n<:Jungle:1437486704469610528>\u00A0- JUNGLE\n<:MID:1437486787315634296>\u00A0- MID\n<:ADC:1437486605110874216>\u00A0- ADC\n<:Support:1437484421753213021>\u00A0- SUPPORT",
-    "color": "#3a3838",
-    "thumbnailUrl": "https://static.wikia.nocookie.net/leagueoflegends/images/9/98/Middle_icon.png/revision/latest?cb=20181117143644"
-  },
+  "reactionRoles": {
+    "embed": {
+      "title": "CHOOSE YOUR LINE",
+      "description": ":flag_cz: Vyber si dole z reakcí svou linku a dostaň přidělenou roli!\n:flag_us: Choose your lane below and get your assigned role!\n\n<:Toplane:1437486878591815692> - TOP\n<:Jungle:1437486704469610528> - JUNGLE\n<:MID:1437486787315634296> - MID\n<:ADC:1437486605110874216> - ADC\n<:Support:1437484421753213021> - SUPPORT",
+      "color": "#3a3838",
+      "thumbnailUrl": "https://static.wikia.nocookie.net/leagueoflegends/images/9/98/Middle_icon.png/revision/latest?cb=20181117143644"
+    },
     "emojiRoleMap": [
-      { "emoji": "<:Toplane:1437486878591815692>", "label": "TOP", "roleId": "1423293095319048202" },
-      { "emoji": "<:Jungle:1437486704469610528>", "label": "JUNGLE", "roleId": "1423292924925575280" },
-      { "emoji": "<:MID:1437486787315634296>", "label": "MID", "roleId": "1423292659572674570" },
-      { "emoji": "<:ADC:1437486605110874216>", "label": "ADC", "roleId": "1423292319150506066" },
-      { "emoji": "<:Support:1437484421753213021>", "label": "SUPPORT", "roleId": "1423292503112814662" }
+      {
+        "emoji": "<:Toplane:1437486878591815692>",
+        "label": "TOP",
+        "roleId": "1423293095319048202"
+      },
+      {
+        "emoji": "<:Jungle:1437486704469610528>",
+        "label": "JUNGLE",
+        "roleId": "1423292924925575280"
+      },
+      {
+        "emoji": "<:MID:1437486787315634296>",
+        "label": "MID",
+        "roleId": "1423292659572674570"
+      },
+      {
+        "emoji": "<:ADC:1437486605110874216>",
+        "label": "ADC",
+        "roleId": "1423292319150506066"
+      },
+      {
+        "emoji": "<:Support:1437484421753213021>",
+        "label": "SUPPORT",
+        "roleId": "1423292503112814662"
+      }
     ]
   },
   "leaveBanLogs": {
-    "leave": { "textTemplate": "{USER} opustil server.", "color": "#FFD700" },
-    "ban": { "textTemplate": "{USER} dostal BAN!", "color": "#FF0000" }
+    "leave": {
+      "textTemplate": "{USER} opustil server.",
+      "color": "#FFD700"
+    },
+    "ban": {
+      "textTemplate": "{USER} dostal BAN!",
+      "color": "#FF0000"
+    }
   },
   "banCommandLog": {
     "title": "🚫 BAN",
