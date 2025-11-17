@@ -3,7 +3,8 @@
     "displayName": "C H Λ O S B O T",
     "statusText": ""
   },
-  "channelsAndRoles": {
+    "verifyEnabled": true,
+    "channelsAndRoles": {
     "guildId": "1400568910176194600",
     "welcomeChannelId": "1428862251162403019",
     "joinLogChannelId": "1428864324474114141",

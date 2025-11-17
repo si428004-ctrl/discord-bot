@@ -20,6 +20,9 @@ import {
 
 dotenv.config();
 
+// 🟢 --- Globální proměnná pro verify --- //
+let verifyEnabled = true; // defaultně zapnutý verify
+
 // --- 🖼 Multer setup pro upload avataru --- //
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -80,6 +83,28 @@ const client = new Client({
     Partials.User,
     Partials.GuildMember
   ]
+});
+
+// --- 🟢 Verify toggle proměnná ---
+let verifyEnabled = config.verifyEnabled ?? true; // načteme z configu, pokud existuje
+
+// --- 🟢 Slash commandy pro start/stop verify ---
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === 'stopverify') {
+    verifyEnabled = false;
+    config.verifyEnabled = false; 
+    fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
+    await interaction.reply('✅ Verify je teď OFF. Noví členové dostanou rovnou verified.');
+  }
+
+  if (interaction.commandName === 'startverify') {
+    verifyEnabled = true;
+    config.verifyEnabled = true; 
+    fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
+    await interaction.reply('✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.');
+  }
 });
 
 // --- 🧠 Anti-dupe zámky / helpery --- //
@@ -573,48 +598,58 @@ client.once("clientReady", async () => {
     }
   }
 
-  // zaregistruj slash commands /clear a /ban
-  const commands = [
-    new SlashCommandBuilder()
-      .setName("clear")
-      .setDescription("🧹 Smaže poslední zprávy v tomto kanálu.")
-      .addIntegerOption(o =>
-        o
-          .setName("pocet")
-          .setDescription("1–100")
-          .setRequired(true)
-      )
-      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+ // zaregistruj slash commands /clear, /ban, /startverify, /stopverify
+const commands = [
+  new SlashCommandBuilder()
+    .setName("clear")
+    .setDescription("🧹 Smaže poslední zprávy v tomto kanálu.")
+    .addIntegerOption(o =>
+      o
+        .setName("pocet")
+        .setDescription("1–100")
+        .setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-    new SlashCommandBuilder()
-      .setName("ban")
-      .setDescription(
-        "🔨 Zabanovat uživatele podle ID (i když není na serveru)"
-      )
-      .addStringOption(o =>
-        o
-          .setName("userid")
-          .setDescription("ID uživatele k banu")
-          .setRequired(true)
-      )
-      .addStringOption(o =>
-        o
-          .setName("duvod")
-          .setDescription("Důvod banu (volitelné)")
-          .setRequired(false)
-      )
-      .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
-  ].map(cmd => cmd.toJSON());
+  new SlashCommandBuilder()
+    .setName("ban")
+    .setDescription(
+      "🔨 Zabanovat uživatele podle ID (i když není na serveru)"
+    )
+    .addStringOption(o =>
+      o
+        .setName("userid")
+        .setDescription("ID uživatele k banu")
+        .setRequired(true)
+    )
+    .addStringOption(o =>
+      o
+        .setName("duvod")
+        .setDescription("Důvod banu (volitelné)")
+        .setRequired(false)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
-  const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
-  await rest.put(
-    Routes.applicationGuildCommands(
-      client.user.id,
-      config.channelsAndRoles.guildId
-    ),
-    { body: commands }
-  );
-    console.log("✅ Slash commands /clear a /ban zaregistrovány.");
+  new SlashCommandBuilder()
+    .setName("startverify")
+    .setDescription("♻️ Zapne ověřovací proces pro nové členy")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName("stopverify")
+    .setDescription("⛔️ Vypne ověřovací proces, nové členy automaticky verifikuje")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+].map(cmd => cmd.toJSON());
+
+const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
+await rest.put(
+  Routes.applicationGuildCommands(
+    client.user.id,
+    config.channelsAndRoles.guildId
+  ),
+  { body: commands }
+);
+console.log("✅ Slash commands /clear, /ban, /startverify a /stopverify zaregistrovány.");
 
   // 🔁 Syncni / refreshni reaction role embed teď při startu
   await syncReactionRoleMessage();
@@ -700,9 +735,18 @@ client.on("guildMemberAdd", async member => {
     }
     if (withShortLock(processedJoins, member.id, 2 * 60 * 1000)) return;
 
-    // dát Unverified roli
-    await member.roles.add(unverifiedRoleId).catch(() => {});
-    console.log(`👤 ${member.user.tag} dostal roli Unverified`);
+    // --- 🤖 Definice rolí pro nový člen ---
+const unverifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.unverifiedRoleId);
+const verifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.verifiedRoleId);
+
+// --- 🤖 Přidání role podle verifyEnabled ---
+if (verifyEnabled) {
+  await member.roles.add(unverifiedRole).catch(() => {});
+  console.log(`👤 ${member.user.tag} dostal roli Unverified`);
+} else {
+  await member.roles.add(verifiedRole).catch(() => {});
+  console.log(`👤 ${member.user.tag} dostal rovnou roli Verified`);
+}
 
     // 1) veřejný welcome embed do nazdarChannelId (ID: 1400569915437748254)
     {
