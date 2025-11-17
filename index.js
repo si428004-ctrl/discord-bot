@@ -92,27 +92,23 @@ client.on('interactionCreate', async interaction => {
   try {
     if (interaction.commandName === 'stopverify') {
       verifyEnabled = false;
-      config.verifyEnabled = false; 
+      config.verifyEnabled = false;
       fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
-
-      await interaction.reply({ content: '✅ Verify je teď OFF. Noví členové dostanou rovnou verified.', flags: 64 });
+      await interaction.reply('✅ Verify je teď OFF. Noví členové dostanou rovnou verified.');
     }
 
     if (interaction.commandName === 'startverify') {
       verifyEnabled = true;
-      config.verifyEnabled = true; 
+      config.verifyEnabled = true;
       fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
-
-      await interaction.reply({ content: '✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.', flags: 64 });
+      await interaction.reply('✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.');
     }
-  } catch (error) {
-    console.error('Chyba při start/stop verify:', error);
-
-    // fallback reply jen pokud interakce ještě nebyla odpovězena
-    if (!interaction.replied && !interaction.deferred) {
-      try {
-        await interaction.reply({ content: '❌ Něco se pokazilo.', flags: 64 });
-      } catch {}
+  } catch (err) {
+    console.error("Chyba při start/stop verify:", err);
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content: '❌ Něco se pokazilo.', ephemeral: true });
+    } else {
+      await interaction.reply({ content: '❌ Něco se pokazilo.', ephemeral: true });
     }
   }
 });
@@ -802,73 +798,69 @@ if (verifyEnabled) {
       }
     }
 
-    // 2) verifikační otázka do welcomeChannelId (původní flow beze změny)
-    const verifyChannel = member.guild.channels.cache.get(
-      config.channelsAndRoles.welcomeChannelId
+    // 2) verifikační otázka do welcomeChannelId jen pokud je verifyEnabled
+if (verifyEnabled) {
+  const verifyChannel = member.guild.channels.cache.get(
+    config.channelsAndRoles.welcomeChannelId
+  );
+  if (!verifyChannel) return;
+
+  const questionText = fillTemplate(
+    config.welcomeFlow.verifyQuestionText,
+    { USER: `${member}` }
+  );
+
+  const questionMsg = await verifyChannel.send(questionText);
+
+  const filter = m => m.author.id === member.id;
+  const collector = verifyChannel.createMessageCollector({
+    filter,
+    max: 1,
+    time: 86400000 // 24h
+  });
+
+  collector.on("collect", async msg => {
+    const logChannel = member.guild.channels.cache.get(
+      config.channelsAndRoles.joinLogChannelId
     );
-    if (!verifyChannel) return;
+    if (!logChannel) return;
 
-    const questionText = fillTemplate(
-      config.welcomeFlow.verifyQuestionText,
-      { USER: `${member}` }
-    );
+    const modLogCfg = config.welcomeFlow.modLogEmbed;
 
-    const questionMsg = await verifyChannel.send(questionText);
+    const embed = new EmbedBuilder()
+      .setTitle(modLogCfg.title)
+      .setDescription(
+        fillTemplate(modLogCfg.descriptionTemplate, {
+          USER: `<@${member.id}>`,
+          ANSWER: msg.content || "*Žádná odpověď*"
+        })
+      )
+      .setColor(modLogCfg.color || "#3a3838");
 
-    const filter = m => m.author.id === member.id;
-    const collector = verifyChannel.createMessageCollector({
-      filter,
-      max: 1,
-      time: 86400000 // 24h
-    });
+    const logMsg = await logChannel.send({ embeds: [embed] });
 
-    collector.on("collect", async msg => {
-      const logChannel = member.guild.channels.cache.get(
-        config.channelsAndRoles.joinLogChannelId
-      );
-      if (!logChannel) return;
+    await logMsg.react("✅");
+    await logMsg.react("❌");
 
-      const modLogCfg = config.welcomeFlow.modLogEmbed;
+    // cleanup
+    await msg.delete().catch(() => {});
+    await questionMsg.delete().catch(() => {});
+  });
 
-      // embed pro mod tým
-      const embed = new EmbedBuilder()
-        .setTitle(modLogCfg.title)
-        .setDescription(
-          fillTemplate(modLogCfg.descriptionTemplate, {
-            USER: `<@${member.id}>`,
-            ANSWER: msg.content || "*Žádná odpověď*"
-          })
+  collector.on("end", async collected => {
+    if (collected.size === 0) {
+      // kick po timeoutu
+      await member
+        .kick(
+          config.welcomeFlow.timeoutKickReason ||
+            "Timeout ověření"
         )
-        .setColor(modLogCfg.color || "#3a3838");
-
-      const logMsg = await logChannel.send({ embeds: [embed] });
-
-      await logMsg.react("✅");
-      await logMsg.react("❌");
-
-      // cleanup
-      await msg.delete().catch(() => {});
-      await questionMsg.delete().catch(() => {});
-    });
-
-    collector.on("end", async collected => {
-      if (collected.size === 0) {
-        // kick po timeoutu
-        await member
-          .kick(
-            config.welcomeFlow.timeoutKickReason ||
-              "Timeout ověření"
-          )
-          .catch(() => {});
-        console.log(
-          `⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`
-        );
-      }
-    });
-  } catch (err) {
-    console.error("❌ Chyba v guildMemberAdd:", err);
-  }
-});
+        .catch(() => {});
+      console.log(
+        `⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`
+      );
+    }
+  });
 
 // === 🧩 Reaction Add ===
 client.on("messageReactionAdd", async (reaction, user) => {
