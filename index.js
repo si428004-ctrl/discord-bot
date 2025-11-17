@@ -20,9 +20,6 @@ import {
 
 dotenv.config();
 
-// 🟢 --- Globální proměnná pro verify --- //
-let verifyEnabled = true; // defaultně zapnutý verify
-
 // --- 🖼 Multer setup pro upload avataru --- //
 const upload = multer({ storage: multer.memoryStorage() });
 
