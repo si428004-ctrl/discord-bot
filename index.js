@@ -94,21 +94,24 @@ client.on('interactionCreate', async interaction => {
       verifyEnabled = false;
       config.verifyEnabled = false;
       fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
-      await interaction.reply('✅ Verify je teď OFF. Noví členové dostanou rovnou verified.');
+
+      // ✅ reply jen jednou
+      await interaction.reply({ content: '✅ Verify je teď OFF. Noví členové dostanou rovnou verified.', ephemeral: true });
     }
 
     if (interaction.commandName === 'startverify') {
       verifyEnabled = true;
       config.verifyEnabled = true;
       fs.writeFileSync('./config.json', JSON.stringify(config, null, 2));
-      await interaction.reply('✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.');
+
+      await interaction.reply({ content: '✅ Verify je teď ON. Noví členové budou muset odpovědět na otázku.', ephemeral: true });
     }
+
   } catch (err) {
-    console.error("Chyba při start/stop verify:", err);
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: '❌ Něco se pokazilo.', ephemeral: true });
-    } else {
-      await interaction.reply({ content: '❌ Něco se pokazilo.', ephemeral: true });
+    console.error('Chyba při start/stop verify:', err);
+    // fallback pro error reply
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: '❌ Něco se pokazilo.', ephemeral: true }).catch(() => {});
     }
   }
 });
@@ -730,102 +733,62 @@ client.on("guildMemberAdd", async member => {
   try {
     if (member.user.bot) return;
 
-    const unverifiedRoleId = config.channelsAndRoles.unverifiedRoleId;
+    const unverifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.unverifiedRoleId);
+    const verifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.verifiedRoleId);
 
     // anti-dupe join
-    if (member.roles.cache.has(unverifiedRoleId)) {
-      console.log(
-        `⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`
-      );
+    if (member.roles.cache.has(config.channelsAndRoles.unverifiedRoleId)) {
+      console.log(`⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`);
       return;
     }
     if (withShortLock(processedJoins, member.id, 2 * 60 * 1000)) return;
 
-    // --- 🤖 Definice rolí pro nový člen ---
-    const unverifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.unverifiedRoleId);
-    const verifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.verifiedRoleId);
+    // --- 1️⃣ Welcome embed s tlačítky vždy ---
+    const welcomeEmbedChannel =
+      member.guild.channels.cache.get("1400569915437748254") ||
+      member.guild.channels.cache.get(config.channelsAndRoles.nazdarChannelId);
 
-    // --- 🤖 Přidání role podle verifyEnabled ---
+    if (welcomeEmbedChannel) {
+      const embed = new EmbedBuilder()
+        .setTitle("W E L C O M E !")
+        .setDescription(
+          `:flag_cz: Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n` +
+          `:flag_us: Welcome ${member}!\nPlease don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!`
+        )
+        .setColor("#3a3838")
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId("pickgame:wildrift").setLabel("🎮WildRift").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId("pickgame:warzone").setLabel("🔫Warzone").setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId("pickgame:metin2").setLabel("⚔️Metin2").setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId("pickgame:cs2").setLabel("🔫CS:2").setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId("pickgame:others").setLabel("👀Others").setStyle(ButtonStyle.Secondary)
+      );
+
+      await welcomeEmbedChannel.send({ embeds: [embed], components: [row] });
+    }
+
+    // --- 2️⃣ Verify logika ---
     if (verifyEnabled) {
+      // přidej Unverified roli
       await member.roles.add(unverifiedRole).catch(() => {});
       console.log(`👤 ${member.user.tag} dostal roli Unverified`);
-    } else {
-      await member.roles.add(verifiedRole).catch(() => {});
-      console.log(`👤 ${member.user.tag} dostal rovnou roli Verified`);
-    }
 
-    // 1) veřejný welcome embed do nazdarChannelId
-    {
-      const welcomeChannelIdHard = "1400569915437748254";
-      const welcomeEmbedChannel =
-        member.guild.channels.cache.get(welcomeChannelIdHard) ||
-        member.guild.channels.cache.get(config.channelsAndRoles.nazdarChannelId);
-
-      if (welcomeEmbedChannel) {
-        const embed = new EmbedBuilder()
-          .setTitle("W E L C O M E !")
-          .setDescription(
-            `:flag_cz: Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome ${member}!\nPlease don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!`
-          )
-          .setColor("#3a3838")
-          .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
-
-        const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId("pickgame:wildrift")
-            .setLabel("🎮WildRift")
-            .setStyle(ButtonStyle.Primary),
-          new ButtonBuilder()
-            .setCustomId("pickgame:warzone")
-            .setLabel("🔫Warzone")
-            .setStyle(ButtonStyle.Danger),
-          new ButtonBuilder()
-            .setCustomId("pickgame:metin2")
-            .setLabel("⚔️Metin2")
-            .setStyle(ButtonStyle.Success),
-          new ButtonBuilder()
-            .setCustomId("pickgame:cs2")
-            .setLabel("🔫CS:2")
-            .setStyle(ButtonStyle.Secondary),
-          new ButtonBuilder()
-            .setCustomId("pickgame:others")
-            .setLabel("👀Others")
-            .setStyle(ButtonStyle.Secondary)
-        );
-
-        await welcomeEmbedChannel.send({ embeds: [embed], components: [row] });
-      }
-    }
-
-    // 2) verifikační otázka do welcomeChannelId jen pokud je verifyEnabled
-    if (verifyEnabled) {
-      const verifyChannel = member.guild.channels.cache.get(
-        config.channelsAndRoles.welcomeChannelId
-      );
+      const verifyChannel = member.guild.channels.cache.get(config.channelsAndRoles.welcomeChannelId);
       if (!verifyChannel) return;
 
-      const questionText = fillTemplate(
-        config.welcomeFlow.verifyQuestionText,
-        { USER: `${member}` }
-      );
-
+      const questionText = fillTemplate(config.welcomeFlow.verifyQuestionText, { USER: `${member}` });
       const questionMsg = await verifyChannel.send(questionText);
 
       const filter = m => m.author.id === member.id;
-      const collector = verifyChannel.createMessageCollector({
-        filter,
-        max: 1,
-        time: 86400000 // 24h
-      });
+      const collector = verifyChannel.createMessageCollector({ filter, max: 1, time: 86400000 });
 
       collector.on("collect", async msg => {
-        const logChannel = member.guild.channels.cache.get(
-          config.channelsAndRoles.joinLogChannelId
-        );
+        const logChannel = member.guild.channels.cache.get(config.channelsAndRoles.joinLogChannelId);
         if (!logChannel) return;
 
         const modLogCfg = config.welcomeFlow.modLogEmbed;
-
         const embed = new EmbedBuilder()
           .setTitle(modLogCfg.title)
           .setDescription(
@@ -837,30 +800,31 @@ client.on("guildMemberAdd", async member => {
           .setColor(modLogCfg.color || "#3a3838");
 
         const logMsg = await logChannel.send({ embeds: [embed] });
-
         await logMsg.react("✅");
         await logMsg.react("❌");
 
+        // cleanup otázek
         await msg.delete().catch(() => {});
         await questionMsg.delete().catch(() => {});
       });
 
       collector.on("end", async collected => {
         if (collected.size === 0) {
-          await member
-            .kick(config.welcomeFlow.timeoutKickReason || "Timeout ověření")
-            .catch(() => {});
-          console.log(
-            `⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`
-          );
+          await member.kick(config.welcomeFlow.timeoutKickReason || "Timeout ověření").catch(() => {});
+          console.log(`⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`);
         }
       });
+
+    } else {
+      // pokud verify je OFF, rovnou Verified
+      await member.roles.add(verifiedRole).catch(() => {});
+      console.log(`👤 ${member.user.tag} dostal rovnou roli Verified`);
     }
 
   } catch (err) {
     console.error("❌ Chyba v guildMemberAdd:", err);
   }
-}); // <- TADY je uzavření client.on
+});
 
 // === 🧩 Reaction Add ===
 client.on("messageReactionAdd", async (reaction, user) => {
