@@ -742,19 +742,19 @@ client.on("guildMemberAdd", async member => {
     if (withShortLock(processedJoins, member.id, 2 * 60 * 1000)) return;
 
     // --- 🤖 Definice rolí pro nový člen ---
-const unverifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.unverifiedRoleId);
-const verifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.verifiedRoleId);
+    const unverifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.unverifiedRoleId);
+    const verifiedRole = member.guild.roles.cache.get(config.channelsAndRoles.verifiedRoleId);
 
-// --- 🤖 Přidání role podle verifyEnabled ---
-if (verifyEnabled) {
-  await member.roles.add(unverifiedRole).catch(() => {});
-  console.log(`👤 ${member.user.tag} dostal roli Unverified`);
-} else {
-  await member.roles.add(verifiedRole).catch(() => {});
-  console.log(`👤 ${member.user.tag} dostal rovnou roli Verified`);
-}
+    // --- 🤖 Přidání role podle verifyEnabled ---
+    if (verifyEnabled) {
+      await member.roles.add(unverifiedRole).catch(() => {});
+      console.log(`👤 ${member.user.tag} dostal roli Unverified`);
+    } else {
+      await member.roles.add(verifiedRole).catch(() => {});
+      console.log(`👤 ${member.user.tag} dostal rovnou roli Verified`);
+    }
 
-    // 1) veřejný welcome embed do nazdarChannelId (ID: 1400569915437748254)
+    // 1) veřejný welcome embed do nazdarChannelId
     {
       const welcomeChannelIdHard = "1400569915437748254";
       const welcomeEmbedChannel =
@@ -770,7 +770,6 @@ if (verifyEnabled) {
           .setColor("#3a3838")
           .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
 
-        // [3] ActionRow s 5 tlačítky (Discord má jen 4 barvy; páté je Secondary)
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId("pickgame:wildrift")
@@ -799,69 +798,70 @@ if (verifyEnabled) {
     }
 
     // 2) verifikační otázka do welcomeChannelId jen pokud je verifyEnabled
-if (verifyEnabled) {
-  const verifyChannel = member.guild.channels.cache.get(
-    config.channelsAndRoles.welcomeChannelId
-  );
-  if (!verifyChannel) return;
-
-  const questionText = fillTemplate(
-    config.welcomeFlow.verifyQuestionText,
-    { USER: `${member}` }
-  );
-
-  const questionMsg = await verifyChannel.send(questionText);
-
-  const filter = m => m.author.id === member.id;
-  const collector = verifyChannel.createMessageCollector({
-    filter,
-    max: 1,
-    time: 86400000 // 24h
-  });
-
-  collector.on("collect", async msg => {
-    const logChannel = member.guild.channels.cache.get(
-      config.channelsAndRoles.joinLogChannelId
-    );
-    if (!logChannel) return;
-
-    const modLogCfg = config.welcomeFlow.modLogEmbed;
-
-    const embed = new EmbedBuilder()
-      .setTitle(modLogCfg.title)
-      .setDescription(
-        fillTemplate(modLogCfg.descriptionTemplate, {
-          USER: `<@${member.id}>`,
-          ANSWER: msg.content || "*Žádná odpověď*"
-        })
-      )
-      .setColor(modLogCfg.color || "#3a3838");
-
-    const logMsg = await logChannel.send({ embeds: [embed] });
-
-    await logMsg.react("✅");
-    await logMsg.react("❌");
-
-    // cleanup
-    await msg.delete().catch(() => {});
-    await questionMsg.delete().catch(() => {});
-  });
-
-  collector.on("end", async collected => {
-    if (collected.size === 0) {
-      // kick po timeoutu
-      await member
-        .kick(
-          config.welcomeFlow.timeoutKickReason ||
-            "Timeout ověření"
-        )
-        .catch(() => {});
-      console.log(
-        `⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`
+    if (verifyEnabled) {
+      const verifyChannel = member.guild.channels.cache.get(
+        config.channelsAndRoles.welcomeChannelId
       );
+      if (!verifyChannel) return;
+
+      const questionText = fillTemplate(
+        config.welcomeFlow.verifyQuestionText,
+        { USER: `${member}` }
+      );
+
+      const questionMsg = await verifyChannel.send(questionText);
+
+      const filter = m => m.author.id === member.id;
+      const collector = verifyChannel.createMessageCollector({
+        filter,
+        max: 1,
+        time: 86400000 // 24h
+      });
+
+      collector.on("collect", async msg => {
+        const logChannel = member.guild.channels.cache.get(
+          config.channelsAndRoles.joinLogChannelId
+        );
+        if (!logChannel) return;
+
+        const modLogCfg = config.welcomeFlow.modLogEmbed;
+
+        const embed = new EmbedBuilder()
+          .setTitle(modLogCfg.title)
+          .setDescription(
+            fillTemplate(modLogCfg.descriptionTemplate, {
+              USER: `<@${member.id}>`,
+              ANSWER: msg.content || "*Žádná odpověď*"
+            })
+          )
+          .setColor(modLogCfg.color || "#3a3838");
+
+        const logMsg = await logChannel.send({ embeds: [embed] });
+
+        await logMsg.react("✅");
+        await logMsg.react("❌");
+
+        await msg.delete().catch(() => {});
+        await questionMsg.delete().catch(() => {});
+      });
+
+      collector.on("end", async collected => {
+        if (collected.size === 0) {
+          await member
+            .kick(config.welcomeFlow.timeoutKickReason || "Timeout ověření")
+            .catch(() => {});
+          console.log(
+            `⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`
+          );
+        }
+      });
     }
-  });
-}
+
+  } catch (err) {
+    console.error("❌ Chyba v guildMemberAdd:", err);
+  }
+}); // <- TADY je uzavření client.on
+
 // === 🧩 Reaction Add ===
 client.on("messageReactionAdd", async (reaction, user) => {
   try {
