@@ -97,11 +97,10 @@ function withShortLock(set, key, ttlMs) {
 // === [2] SADA HERNÍCH ROLÍ PRO STATISTIKY + TLAČÍTKA ===
 const GAME_ROLE_IDS = [
   "1433504172296245278", // WildRift
-  "1433504443269255399", // LOCKDOWN
+  "1433504443269255399", // Others
   "1433504552140673105", // Warzone
   "1433504646357586062", // Metin2
   "1433504694529167360", // CS:2
-  "1400578107823489024", // Creator
 ];
 
 // Pro mapování tlačítek -> role
@@ -110,7 +109,7 @@ const BUTTON_ROLE_MAP = {
   "pickgame:warzone": "1433504552140673105",
   "pickgame:metin2": "1433504646357586062",
   "pickgame:cs2": "1433504694529167360",
-  "pickgame:lockdown": "1433504443269255399",
+  "pickgame:others": "1433504443269255399",
 };
 
 // === [3] RANK ROLE MAP (emoji -> roleId) ===
@@ -739,8 +738,8 @@ client.on("guildMemberAdd", async member => {
             .setLabel("🔫CS:2")
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
-            .setCustomId("pickgame:lockdown")
-            .setLabel("☣️LOCKDOWN")
+            .setCustomId("pickgame:others")
+            .setLabel("👀Others")
             .setStyle(ButtonStyle.Secondary)
         );
 
