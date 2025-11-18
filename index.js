@@ -28,6 +28,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // --- 📁 Načtení konfiguračního JSONu --- //
 let config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+// použij hodnotu z config.json (pokud tam není, true fallback)
+let verifyEnabled = !!config.verifyEnabled;
+
 
 // =====================
 // 📝 LOG BUFFER
@@ -266,8 +269,9 @@ async function syncReactionRoleMessage() {
 function reloadConfig() {
   try {
     config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
-    console.log("♻️ Config reloadnutý.");
+    console.log(♻️ Config reloadnutý.");
 
+    // identity + presence (stávající kód zanech)
     if (client?.user && config.botIdentity?.displayName) {
       client.user
         .setUsername(config.botIdentity.displayName)
@@ -286,6 +290,11 @@ function reloadConfig() {
       });
       console.log(`💬 Status bota nastaven na: ${config.botIdentity.statusText}`);
     }
+
+    // --- NOVĚ: přepni runtime verifyEnabled podle configu ---
+    verifyEnabled = !!config.verifyEnabled;
+    console.log(`🔔 verifyEnabled = ${verifyEnabled}`);
+
   } catch (err) {
     console.error("❌ Chyba při reloadu configu:", err.message);
   }
@@ -296,6 +305,11 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
+app.post("/api/verify-toggle", express.json(), (req, res) => {
+  const { enabled } = req.body;
+  verifyEnabled = !!enabled; // aktualizuje globální proměnnou
+  res.json({ success: true, verifyEnabled });
+});
 
 // --- 🔒 Basic auth middleware --- //
 function requireAdminAuth(req, res, next) {
@@ -441,6 +455,25 @@ app.post("/save-botsettings", requireAdminAuth, (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ /save-botsettings error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- 💾 POST /save-verify --- //
+app.post("/save-verify", requireAdminAuth, (req, res) => {
+  try {
+    const incoming = req.body;
+    // očekává { verifyEnabled: true|false }
+    config.verifyEnabled = !!incoming.verifyEnabled;
+
+    fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
+
+    // přenačti runtime hodnoty
+    reloadConfig();
+
+    res.json({ ok: true, verifyEnabled: config.verifyEnabled });
+  } catch (err) {
+    console.error("❌ /save-verify error:", err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -687,27 +720,24 @@ client.once("clientReady", async () => {
 });
 
 
-// === 🟢 Nový člen join ===
+// === 🟢 Nový člen join (upraveno pro verifyEnabled) ===
 client.on("guildMemberAdd", async member => {
   try {
     if (member.user.bot) return;
 
     const unverifiedRoleId = config.channelsAndRoles.unverifiedRoleId;
+    const verifiedRoleId = config.channelsAndRoles.verifiedRoleId;
 
     // anti-dupe join
-    if (member.roles.cache.has(unverifiedRoleId)) {
+    if (member.roles.cache.has(unverifiedRoleId) || member.roles.cache.has(verifiedRoleId)) {
       console.log(
-        `⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`
+        ⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`
       );
       return;
     }
     if (withShortLock(processedJoins, member.id, 2 * 60 * 1000)) return;
 
-    // dát Unverified roli
-    await member.roles.add(unverifiedRoleId).catch(() => {});
-    console.log(`👤 ${member.user.tag} dostal roli Unverified`);
-
-    // 1) veřejný welcome embed do nazdarChannelId (ID: 1400569915437748254)
+    // --- 1) veřejný welcome embed do nazdarChannelId (vždy) ---
     {
       const welcomeChannelIdHard = "1400569915437748254";
       const welcomeEmbedChannel =
@@ -723,7 +753,6 @@ client.on("guildMemberAdd", async member => {
           .setColor("#3a3838")
           .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
 
-        // [3] ActionRow s 5 tlačítky (Discord má jen 4 barvy; páté je Secondary)
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId("pickgame:wildrift")
@@ -751,69 +780,85 @@ client.on("guildMemberAdd", async member => {
       }
     }
 
-    // 2) verifikační otázka do welcomeChannelId (původní flow beze změny)
-    const verifyChannel = member.guild.channels.cache.get(
-      config.channelsAndRoles.welcomeChannelId
-    );
-    if (!verifyChannel) return;
-
-    const questionText = fillTemplate(
-      config.welcomeFlow.verifyQuestionText,
-      { USER: `${member}` }
-    );
-
-    const questionMsg = await verifyChannel.send(questionText);
-
-    const filter = m => m.author.id === member.id;
-    const collector = verifyChannel.createMessageCollector({
-      filter,
-      max: 1,
-      time: 86400000 // 24h
-    });
-
-    collector.on("collect", async msg => {
-      const logChannel = member.guild.channels.cache.get(
-        config.channelsAndRoles.joinLogChannelId
-      );
-      if (!logChannel) return;
-
-      const modLogCfg = config.welcomeFlow.modLogEmbed;
-
-      // embed pro mod tým
-      const embed = new EmbedBuilder()
-        .setTitle(modLogCfg.title)
-        .setDescription(
-          fillTemplate(modLogCfg.descriptionTemplate, {
-            USER: `<@${member.id}>`,
-            ANSWER: msg.content || "*Žádná odpověď*"
-          })
-        )
-        .setColor(modLogCfg.color || "#3a3838");
-
-      const logMsg = await logChannel.send({ embeds: [embed] });
-
-      await logMsg.react("✅");
-      await logMsg.react("❌");
-
-      // cleanup
-      await msg.delete().catch(() => {});
-      await questionMsg.delete().catch(() => {});
-    });
-
-    collector.on("end", async collected => {
-      if (collected.size === 0) {
-        // kick po timeoutu
-        await member
-          .kick(
-            config.welcomeFlow.timeoutKickReason ||
-              "Timeout ověření"
-          )
-          .catch(() => {});
-        console.log(
-          `⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`
-        );
+    // --- 2) verify flow závislý na verifyEnabled ---
+    if (verifyEnabled) {
+      // dej Unverified roli a pošli ověřovací otázku (stávající flow)
+      if (unverifiedRoleId) {
+        await member.roles.add(unverifiedRoleId).catch(() => {});
+        console.log(`👤 ${member.user.tag} dostal roli Unverified`);
       }
-    });
+
+      const verifyChannel = member.guild.channels.cache.get(
+        config.channelsAndRoles.welcomeChannelId
+      );
+      if (!verifyChannel) return;
+
+      const questionText = fillTemplate(
+        config.welcomeFlow.verifyQuestionText,
+        { USER: `${member}` }
+      );
+
+      const questionMsg = await verifyChannel.send(questionText);
+
+      const filter = m => m.author.id === member.id;
+      const collector = verifyChannel.createMessageCollector({
+        filter,
+        max: 1,
+        time: 86400000 // 24h
+      });
+
+      collector.on("collect", async msg => {
+        const logChannel = member.guild.channels.cache.get(
+          config.channelsAndRoles.joinLogChannelId
+        );
+        if (!logChannel) return;
+
+        const modLogCfg = config.welcomeFlow.modLogEmbed;
+
+        // embed pro mod tým
+        const embed = new EmbedBuilder()
+          .setTitle(modLogCfg.title)
+          .setDescription(
+            fillTemplate(modLogCfg.descriptionTemplate, {
+              USER: `<@${member.id}>`,
+              ANSWER: msg.content || "*Žádná odpověď*"
+            })
+          )
+          .setColor(modLogCfg.color || "#3a3838");
+
+        const logMsg = await logChannel.send({ embeds: [embed] });
+
+        await logMsg.react("✅");
+        await logMsg.react("❌");
+
+        // cleanup
+        await msg.delete().catch(() => {});
+        await questionMsg.delete().catch(() => {});
+      });
+
+      collector.on("end", async collected => {
+        if (collected.size === 0) {
+          // kick po timeoutu
+          await member
+            .kick(
+              config.welcomeFlow.timeoutKickReason ||
+                "Timeout ověření"
+            )
+            .catch(() => {});
+          console.log(
+            `⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`
+          );
+        }
+      });
+
+    } else {
+      // pokud verify vypnutý → hned dej VERIFIED roli (neposílej otázku)
+      if (verifiedRoleId) {
+        await member.roles.add(verifiedRoleId).catch(() => {});
+        console.log(`👤 ${member.user.tag} dostal roli Verified (verify vypnuté)`);
+      }
+    }
+
   } catch (err) {
     console.error("❌ Chyba v guildMemberAdd:", err);
   }
