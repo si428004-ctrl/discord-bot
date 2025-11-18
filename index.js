@@ -266,9 +266,11 @@ async function syncReactionRoleMessage() {
 function reloadConfig() {
   try {
     config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
-    console.log(♻️ Config reloadnutý.");
+    console.log("♻️ Config reloadnutý.");
 
-    // identity + presence (stávající kód zanech)
+    // aktualizuj runtime proměnnou verifyEnabled (pokud v configu je)
+    verifyEnabled = !!config.verifyEnabled;
+
     if (client?.user && config.botIdentity?.displayName) {
       client.user
         .setUsername(config.botIdentity.displayName)
@@ -287,11 +289,6 @@ function reloadConfig() {
       });
       console.log(`💬 Status bota nastaven na: ${config.botIdentity.statusText}`);
     }
-
-    // --- NOVĚ: přepni runtime verifyEnabled podle configu ---
-    verifyEnabled = !!config.verifyEnabled;
-    console.log(`🔔 verifyEnabled = ${verifyEnabled}`);
-
   } catch (err) {
     console.error("❌ Chyba při reloadu configu:", err.message);
   }
@@ -727,9 +724,7 @@ client.on("guildMemberAdd", async member => {
 
     // anti-dupe join
     if (member.roles.cache.has(unverifiedRoleId) || member.roles.cache.has(verifiedRoleId)) {
-      console.log(
-        ⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`
-      );
+      console.log(`⚠️ Duplicitní guildMemberAdd pro ${member.user.tag} — přeskočeno.`);
       return;
     }
     if (withShortLock(processedJoins, member.id, 2 * 60 * 1000)) return;
