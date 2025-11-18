@@ -457,15 +457,24 @@ app.post("/save-botsettings", requireAdminAuth, (req, res) => {
 app.post("/save-verify", requireAdminAuth, (req, res) => {
   try {
     const incoming = req.body;
-    // očekává { verifyEnabled: true|false }
-    config.verifyEnabled = !!incoming.verifyEnabled;
+    if (typeof incoming.verifyEnabled !== "boolean") {
+      return res.status(400).json({ ok: false, error: "verifyEnabled must be boolean" });
+    }
+
+    // ujistíme se, že config existuje
+    if (!config) config = {};
+    config.verifyEnabled = incoming.verifyEnabled;
 
     fs.writeFileSync("./config.json", JSON.stringify(config, null, 2), "utf8");
 
-    // přenačti runtime hodnoty
-    reloadConfig();
+    // přenačteme do runtime proměnné
+    verifyEnabled = !!config.verifyEnabled;
 
-    res.json({ ok: true, verifyEnabled: config.verifyEnabled });
+    // zavolat reloadConfig() aby se případně aktualizoval i další stav
+    try { reloadConfig(); } catch (e) {}
+
+    console.log(`🔔 verifyEnabled nastaveno na ${verifyEnabled}`);
+    res.json({ ok: true, verifyEnabled });
   } catch (err) {
     console.error("❌ /save-verify error:", err);
     res.status(500).json({ ok: false, error: err.message });
