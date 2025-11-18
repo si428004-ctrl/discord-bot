@@ -73,6 +73,7 @@
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     button.btn {
@@ -102,6 +103,25 @@
       font-size: .7rem;
       padding: 8px 10px;
       line-height: 1.1;
+    }
+
+    /* header toggle */
+    .header-toggle {
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-col);
+      font-size: .8rem;
+      color: var(--txt-dim);
+    }
+    .header-toggle input[type="checkbox"]{
+      width:18px;
+      height:18px;
+      accent-color: var(--accent);
+      cursor: pointer;
     }
 
     /* cards */
@@ -417,6 +437,15 @@
       </div>
 
       <div class="top-actions">
+        <!-- NEW: header verify toggle -->
+        <div class="header-toggle" title="Zapnout/vypnout ověřování nováčků">
+          <input type="checkbox" id="requireVerifyHeader" />
+          <div style="display:flex;flex-direction:column;">
+            <div style="font-weight:600;color:#fff;font-size:.85rem;">Verify</div>
+            <div style="font-size:.7rem;color:var(--txt-dim);">Vyžadovat ověření</div>
+          </div>
+        </div>
+
         <button class="btn sec" onclick="openLogs()">Logs</button>
       </div>
     </header>
@@ -591,6 +620,19 @@
             <label>Důvod kicku po 24h bez odpovědi</label>
             <input id="timeoutKickReason" class="txt" />
             <div class="hint">Tohle se zapíše jako důvod při kicku.</div>
+          </div>
+
+          <!-- PŘIDÁNO: Toggle verify (v hlavním obsahu taky) -->
+          <div class="field" style="grid-column:1 / -1;">
+            <div style="display:flex;align-items:center;gap:12px">
+              <label style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" id="requireVerify" />
+                <span style="font-weight:600;color:#fff">Vyžadovat ověření nováčků</span>
+              </label>
+            </div>
+            <div class="hint">
+              Když tohle je zapnuté, bot novým členům přiřadí <strong>UNVERIFIED</strong> a pošle ověřovací otázku. Když je vypnuté, noví dostanou <strong>VERIFIED</strong> a otázka se neposílá.
+            </div>
           </div>
         </div>
 
@@ -931,6 +973,24 @@
           }
         }
 
+        // NEW: verify toggle state - sync both header and main checkboxes
+        try {
+          const chkMain = document.getElementById('requireVerify');
+          const chkHeader = document.getElementById('requireVerifyHeader');
+
+          const enabled = (typeof state.verifyEnabled !== 'undefined')
+            ? !!state.verifyEnabled
+            : !!(state.welcomeFlow && state.welcomeFlow.verifyQuestionText);
+
+          if (chkMain) chkMain.checked = enabled;
+          if (chkHeader) chkHeader.checked = enabled;
+
+          // Attach listeners (idempotent)
+          setupVerifyToggle();
+        } catch (e) {
+          console.warn("verify toggle load fail:", e);
+        }
+
         // REACTION ROLES
         if (state.reactionRoles) {
           if (state.reactionRoles.embed) {
@@ -974,6 +1034,30 @@
         console.error("❌ Nepodařilo se načíst config:", err);
         alert("Nepodařilo se načíst konfiguraci bota 😭");
       }
+    }
+
+    // Attach and sync verify toggles
+    function setupVerifyToggle() {
+      const mainChk = document.getElementById('requireVerify');
+      const headChk = document.getElementById('requireVerifyHeader');
+
+      if (!mainChk || !headChk) return;
+
+      // prevent adding multiple handlers
+      if (mainChk._verifyHandlerAttached) return;
+      mainChk._verifyHandlerAttached = true;
+      headChk._verifyHandlerAttached = true;
+
+      const handler = (checked) => {
+        // sync both UI elements
+        mainChk.checked = checked;
+        headChk.checked = checked;
+        // call save
+        saveVerify(checked);
+      };
+
+      mainChk.addEventListener('change', (e) => handler(e.target.checked));
+      headChk.addEventListener('change', (e) => handler(e.target.checked));
     }
 
     // === REACTION ROLES RENDER ===
@@ -1129,12 +1213,34 @@
       })
       .catch(err => {
         console.error(err);
-        alert("❌ Nepovedlo se spojit se serverem (/save-welcome).");
+        alert("❌ Nepodařilo se spojit se serverem (/save-welcome).");
       });
     }
 
     function resetWelcome(){
       loadInitial();
+    }
+
+    // NEW: save verify toggle
+    async function saveVerify(checked) {
+      try {
+        const res = await fetch("/save-verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ verifyEnabled: !!checked })
+        });
+        const j = await res.json();
+        if (j.ok) {
+          console.log("verify saved ->", checked);
+          // update local state and re-load if needed
+          loadInitial();
+        } else {
+          alert("❌ Chyba při ukládání verify: " + (j.error || "neznámá chyba"));
+        }
+      } catch (err) {
+        console.error("saveVerify error", err);
+        alert("❌ Nepodařilo se uložit verify (server nedostupný).");
+      }
     }
 
     // 4) REACTION ROLES
@@ -1298,7 +1404,7 @@
       })
       .catch(err => {
         console.error(err);
-        alert("❌ Nepovedlo se spojit se serverem (/upload-avatar).");
+        alert("❌ Nepodařilo se spojit se serverem (/upload-avatar).");
       });
     }
 
@@ -1330,7 +1436,9 @@
     }
 
     // init page load
-    loadInitial();
+    window.addEventListener('DOMContentLoaded', () => {
+      loadInitial();
+    });
   </script>
 
 </body>
