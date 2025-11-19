@@ -21,7 +21,7 @@
   "welcomeFlow": {
     "greetingEmbed": {
       "title": "W E L C O M E !",
-      "description": ":flag_cz: Vítej {USER}!\nNechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome {USER}!\nPlease don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!",
+      "description": ":flag_cz: Vítej ${member}!\nNechovej se tu jako píča prosím. Díky! 🤍\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome ${member}!\nPlease don’t act like a pussy here, thanks! 🤍\nClick a button below to choose the game you're here for!",
       "color": "#3a3838"
     },
     "verifyQuestionText": ":flag_cz: Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?\n\n:flag_us: Hello {USER}, to approve you we need your answer. Where did you find our server and why do you want to join?",

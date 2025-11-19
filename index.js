@@ -860,10 +860,12 @@ client.on("messageReactionAdd", async (reaction, user) => {
   try {
     if (user.bot) return;
 
+    // pokud partial, fetchni
     if (reaction.partial) {
       try {
         await reaction.fetch();
-      } catch {
+      } catch (e) {
+        console.warn("⚠️ Cannot fetch reaction:", e.message);
         return;
       }
     }
@@ -871,96 +873,123 @@ client.on("messageReactionAdd", async (reaction, user) => {
     const message = reaction.message;
     if (!message.guild) return;
 
-    const rk = `add:${message.id}:${reaction.emoji.identifier}:${user.id}`;
-    if (withShortLock(processedReactions, rk, 2000)) return;
+    // debug log (pomůže při testování)
+    console.log(`🔁 reactionAdd: msg=${message.id} ch=${message.channelId} emoji=${reaction.emoji.toString()} by=${user.tag}`);
 
-       // 1) reaction roles (lajny z configu + ranky z RANK_EMOJI_ROLE_MAP)
-    if (
-      message.channelId ===
-      config.channelsAndRoles.roleSelectChannelId
-    ) {
+    // --- reaction roles (roleSelectChannel) --- (pokud to máš)
+    if (message.channelId === config.channelsAndRoles?.roleSelectChannelId) {
       const emojiKey = reaction.emoji.toString();
       const EMOJI_ROLE_MAP = buildEmojiRoleMap();
-
-      // nejdřív lajny / jiné role z configu, pak rank role
-      const roleId =
-        EMOJI_ROLE_MAP[emojiKey] || RANK_EMOJI_ROLE_MAP[emojiKey];
-
+      const roleId = EMOJI_ROLE_MAP[emojiKey] || RANK_EMOJI_ROLE_MAP[emojiKey];
       if (!roleId) return;
-
-      const member = await message.guild.members
-        .fetch(user.id)
-        .catch(() => null);
+      const member = await message.guild.members.fetch(user.id).catch(() => null);
       if (member) await member.roles.add(roleId).catch(() => {});
       return;
     }
 
-
-    // 2) approve / reject mod log
-    if (
-      message.channelId ===
-      config.channelsAndRoles.joinLogChannelId
-    ) {
+    // --- approve / reject v joinLogChannel ---
+    if (message.channelId === config.channelsAndRoles?.joinLogChannelId) {
       const embed = message.embeds?.[0];
-      if (!embed?.title?.includes("Nový člen")) return;
+      if (!embed) return;
 
-      const match = embed.description?.match(/<@(\d+)>/);
-      if (!match) return;
-      const memberId = match[1];
-
-      const guild = message.guild;
-      const member = await guild.members
-        .fetch(memberId)
-        .catch(() => null);
-      if (!member) return;
-
-      if (reaction.emoji.name === "✅") {
-        await member.roles
-          .add(config.channelsAndRoles.verifiedRoleId)
-          .catch(() => {});
-        await member.roles
-          .remove(config.channelsAndRoles.unverifiedRoleId)
-          .catch(() => {});
-        await message.delete().catch(() => {});
-
-        const approveCfg =
-          config.welcomeFlow.modLogEmbed.approveMessage;
-        await message.channel.send({
-          embeds: [
-            new EmbedBuilder()
-              .setDescription(
-                fillTemplate(approveCfg.textTemplate, {
-                  USER: `<@${member.id}>`,
-                  MOD: `<@${user.id}>`
-                })
-              )
-              .setColor(approveCfg.color || "#00FF00")
-          ]
-        });
-      } else if (reaction.emoji.name === "❌") {
-        await member
-          .kick(`Zamítnuto ${user.tag}`)
-          .catch(() => {});
-        await message.delete().catch(() => {});
-
-        const rejectCfg =
-          config.welcomeFlow.modLogEmbed.rejectMessage;
-        await message.channel.send({
-          embeds: [
-            new EmbedBuilder()
-              .setDescription(
-                fillTemplate(rejectCfg.textTemplate, {
-                  USER: `<@${member.id}>`,
-                  MOD: `<@${user.id}>`
-                })
-              )
-              .setColor(rejectCfg.color || "#FF0000")
-          ]
-        });
+      // Lepší rozpoznání: když titulek obsahuje "Nový člen" nebo jiný modLogCfg.title
+      const title = embed.title || "";
+      // pokud title vypadá jako náš mod log
+      if (!title.toLowerCase().includes((config.welcomeFlow?.modLogEmbed?.title || "nový člen").toLowerCase())) {
+        return;
       }
-    }
+
+      // Zkus najít ID člena v embedu (podpora <@123>, <@!123> i čisté číslo)
+      let memberId = null;
+      const desc = embed.description || "";
+      const m1 = desc.match(/<@!?(\d{17,19})>/);
+      if (m1) memberId = m1[1];
+      if (!memberId) {
+        const m2 = desc.match(/(\d{17,19})/);
+        if (m2) memberId = m2[1];
+      }
+
+      if (!memberId) {
+        console.warn("⚠️ approve handler: nenašlo se memberId v embedu:", embed.description);
+        return;
+      }
+
+      // načíst člena
+      const guild = message.guild;
+      const member = await guild.members.fetch(memberId).catch(() => null);
+      if (!member) {
+        console.warn("⚠️ approve handler: member nenalezen:", memberId);
+        return;
+      }
+
+      // Rozlišení emoji: používáme .toString() (řeší i custom/unicode)
+      const emojiKey = reaction.emoji.toString();
+
+      // schválení
+      if (emojiKey === "✅" || emojiKey === "✅\uFE0F") {
+        // permissions check
+        const botMember = guild.members.cache.get(client.user.id);
+        const verifiedRoleId = config.channelsAndRoles?.verifiedRoleId;
+        const unverifiedRoleId = config.channelsAndRoles?.unverifiedRoleId;
+
+        if (!verifiedRoleId) {
+          console.warn("⚠️ approve: verifiedRoleId není v configu");
+          return;
+        }
+
+        // check bot can manage roles and role position
+        if (!botMember.permissions.has("ManageRoles")) {
+          console.warn("⚠️ Bot nemá ManageRoles permission");
+          return;
+        }
+
+        // try assign/remove
+        await member.roles.add(verifiedRoleId).catch(err => console.warn("⚠️ add verified failed:", err.message));
+        if (unverifiedRoleId) {
+          await member.roles.remove(unverifiedRoleId).catch(err => console.warn("⚠️ remove unverified failed:", err.message));
+        }
+
+        // odpověď do kanálu
+        const approveCfg = config.welcomeFlow?.modLogEmbed?.approveMessage;
+        if (approveCfg) {
+          await message.channel.send({
+            embeds: [
+              new EmbedBuilder()
+                .setDescription(
+                  fillTemplate(approveCfg.textTemplate || "<@{USER}> schválen(a) {MOD}", { USER: `<@${member.id}>`, MOD: `<@${user.id}>` })
+                )
+                .setColor(approveCfg.color || "#00FF00")
+            ]
+          }).catch(() => {});
+        }
+
+        await message.delete().catch(() => {});
+        return;
+      }
+
+      // odmítnutí
+      if (emojiKey === "❌" || emojiKey === "❌\uFE0F") {
+        await member.kick(`Zamítnuto ${user.tag}`).catch(err => console.warn("⚠️ kick failed:", err.message));
+
+        const rejectCfg = config.welcomeFlow?.modLogEmbed?.rejectMessage;
+        if (rejectCfg) {
+          await message.channel.send({
+            embeds: [
+              new EmbedBuilder()
+                .setDescription(fillTemplate(rejectCfg.textTemplate || "<@{USER}> zamítnut {MOD}", { USER: `<@${member.id}>`, MOD: `<@${user.id}>` }))
+                .setColor(rejectCfg.color || "#FF0000")
+            ]
+          }).catch(() => {});
+        }
+
+        await message.delete().catch(() => {});
+        return;
+      }
+
+    } // end joinLogChannel check
+
   } catch (err) {
-    console.error("⚠️ Chyba při messageReactionAdd:", err);
+    console.error("⚠️ Chyba v messageReactionAdd:", err);
   }
 });
 
