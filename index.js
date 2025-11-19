@@ -839,17 +839,26 @@ const embed = new EmbedBuilder()
         collector.on("end", async collected => {
           if (collected.size === 0) {
             // kick po timeoutu (pokud je nastaven reason)
-            await member.kick(config.welcomeFlow?.timeoutKickReason || "Timeout ověření").catch(() => {});
-            console.log(`⏰ ${member.user.tag} byl vyhozen po timeoutu verify`);
+            await member.kick(config.welcomeFlow.timeoutKickReason || "Timeout ověření").catch(() => {});
+console.log(`⏰ ${member.user.tag} byl automaticky vyhozen po timeoutu`);
+
+// uvolnit lock
+processedJoins.delete(member.id);
+console.log(`🔓 processedJoins cleared for ${member.user.tag} after timeout kick`);
+
           }
         });
       }
     } else {
       // verify disabled → rovnou verified role
       if (verifiedRoleId) {
-        await member.roles.add(verifiedRoleId).catch(() => {});
-        console.log(`✅ ${member.user.tag} dostal roli Verified (verifyEnabled=false)`);
-      }
+  await member.roles.add(verifiedRoleId).catch(() => {});
+  console.log(`✅ ${member.user.tag} automaticky VERIFIED (verifyEnabled=false)`);
+  // uvolnit lock
+  processedJoins.delete(member.id);
+  console.log(`🔓 processedJoins cleared for ${member.user.tag} after auto-verify`);
+}
+
     }
 
   } catch (err) {
@@ -971,6 +980,9 @@ if (unverifiedRoleId) {
     console.warn("⚠️ remove unverified failed:", err && err.message ? err.message : err);
   }
 }
+// Uvolnit lock — umožní okamžitý rejoin
+processedJoins.delete(member.id);
+console.log(`🔓 processedJoins cleared for ${member.user.tag} after approve`);
 
         // odpověď do kanálu
         const approveCfg = config.welcomeFlow?.modLogEmbed?.approveMessage;
@@ -993,6 +1005,9 @@ if (unverifiedRoleId) {
       // odmítnutí
       if (emojiKey === "❌" || emojiKey === "❌\uFE0F") {
         await member.kick(`Zamítnuto ${user.tag}`).catch(err => console.warn("⚠️ kick failed:", err.message));
+// uvolnit lock
+processedJoins.delete(member.id);
+console.log(`🔓 processedJoins cleared for ${member.user.tag} after reject/kick`);
 
         const rejectCfg = config.welcomeFlow?.modLogEmbed?.rejectMessage;
         if (rejectCfg) {
