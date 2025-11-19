@@ -27,7 +27,7 @@
     "verifyQuestionText": ":flag_cz: Ahoj {USER}, pro schválení potřebujeme tvou odpověď. Kde jsi našel náš server a proč se chceš připojit?\n\n:flag_us: Hello {USER}, to approve you we need your answer. Where did you find our server and why do you want to join?",
     "modLogEmbed": {
       "title": "🆕 Nový člen na serveru",
-      "descriptionTemplate": "👤 **Uživatel:** {USER}\n📝 **Odpověď:**\n\n{ANSWER}",
+      "descriptionTemplate": "👤 **Uživatel:** <@{USER}>\n📝 **Odpověď:**\n\n{ANSWER}",
       "color": "#3a3838",
       "approveMessage": {
         "textTemplate": "{USER} byl schválen uživatelem {MOD} ✅",

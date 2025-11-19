@@ -760,12 +760,14 @@ client.on("guildMemberAdd", async member => {
         member.guild.channels.cache.get(config.channelsAndRoles?.nazdarChannelId);
 
       if (welcomeEmbedChannel) {
-        const embed = new EmbedBuilder()
-          .setTitle(config.welcomeFlow?.greetingEmbed?.title || "W E L C O M E !")
-          .setDescription(config.welcomeFlow?.greetingEmbed?.description ||
-            `:flag_cz: Vítej {USER}!\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome {USER}!`)
-          .setColor(config.welcomeFlow?.greetingEmbed?.color || "#3a3838")
-          .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
+        const rawDesc = config.welcomeFlow?.greetingEmbed?.description ||
+  `:flag_cz: Vítej {USER}!\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome {USER}!`;
+
+const embed = new EmbedBuilder()
+  .setTitle(config.welcomeFlow?.greetingEmbed?.title || "W E L C O M E !")
+  .setDescription(fillTemplate(rawDesc, { USER: `<@${member.id}>` }))
+  .setColor(config.welcomeFlow?.greetingEmbed?.color || "#3a3838")
+  .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId("pickgame:wildrift").setLabel("🎮WildRift").setStyle(ButtonStyle.Primary),
@@ -862,19 +864,29 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
     // pokud partial, fetchni
     if (reaction.partial) {
-      try {
-        await reaction.fetch();
-      } catch (e) {
-        console.warn("⚠️ Cannot fetch reaction:", e.message);
-        return;
-      }
-    }
+  try {
+    await reaction.fetch();
+  } catch (e) {
+    console.warn("⚠️ Cannot fetch reaction:", e.message);
+    return;
+  }
+}
 
-    const message = reaction.message;
-    if (!message.guild) return;
+let message = reaction.message;
+// sometimes message is partial too — try fetch
+if (message.partial) {
+  try {
+    message = await message.fetch();
+  } catch (e) {
+    console.warn("⚠️ Cannot fetch message for reaction:", e.message);
+    return;
+  }
+}
 
-    // debug log (pomůže při testování)
-    console.log(`🔁 reactionAdd: msg=${message.id} ch=${message.channelId} emoji=${reaction.emoji.toString()} by=${user.tag}`);
+if (!message.guild) return;
+
+// debug log (pomůže ověřit, že handler přišel)
+console.log(`🔁 reactionAdd: msg=${message.id} ch=${message.channelId} emoji=${reaction.emoji.toString()} by=${user.tag}`);
 
     // --- reaction roles (roleSelectChannel) --- (pokud to máš)
     if (message.channelId === config.channelsAndRoles?.roleSelectChannelId) {
@@ -938,16 +950,27 @@ client.on("messageReactionAdd", async (reaction, user) => {
         }
 
         // check bot can manage roles and role position
-        if (!botMember.permissions.has("ManageRoles")) {
-          console.warn("⚠️ Bot nemá ManageRoles permission");
-          return;
-        }
+        if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
+  console.warn("⚠️ Bot nemá ManageRoles permission (nebo role je níže než target role)");
+  return;
+}
 
         // try assign/remove
-        await member.roles.add(verifiedRoleId).catch(err => console.warn("⚠️ add verified failed:", err.message));
-        if (unverifiedRoleId) {
-          await member.roles.remove(unverifiedRoleId).catch(err => console.warn("⚠️ remove unverified failed:", err.message));
-        }
+        try {
+  await member.roles.add(verifiedRoleId);
+  console.log(`✅ Přidána verified role ${verifiedRoleId} uživateli ${member.user.tag}`);
+} catch (err) {
+  console.warn("⚠️ add verified failed:", err && err.message ? err.message : err);
+}
+
+if (unverifiedRoleId) {
+  try {
+    await member.roles.remove(unverifiedRoleId);
+    console.log(`➖ Odebrána unverified role ${unverifiedRoleId} uživateli ${member.user.tag}`);
+  } catch (err) {
+    console.warn("⚠️ remove unverified failed:", err && err.message ? err.message : err);
+  }
+}
 
         // odpověď do kanálu
         const approveCfg = config.welcomeFlow?.modLogEmbed?.approveMessage;
