@@ -763,7 +763,7 @@ client.on("guildMemberAdd", async member => {
         const embed = new EmbedBuilder()
           .setTitle(config.welcomeFlow?.greetingEmbed?.title || "W E L C O M E !")
           .setDescription(config.welcomeFlow?.greetingEmbed?.description ||
-            `:flag_cz: Vítej ${member}!\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome ${member}!`)
+            `:flag_cz: Vítej {USER}!\nVyber si kliknutím na tlačítko hru, kvůli které jsi tu!\n\n:flag_us: Welcome {USER}!`)
           .setColor(config.welcomeFlow?.greetingEmbed?.color || "#3a3838")
           .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
 
