@@ -840,6 +840,8 @@ const row2 = new ActionRowBuilder().addComponents(
 await welcomeEmbedChannel
   .send({ embeds: [embed], components: [row1, row2] })
   .catch(() => {});
+     }
+   }
 
     // IDs z configu
     const unverifiedRoleId = config.channelsAndRoles?.unverifiedRoleId;
