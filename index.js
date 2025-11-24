@@ -104,6 +104,9 @@ const GAME_ROLE_IDS = [
   "1433504552140673105", // Warzone
   "1433504646357586062", // Metin2
   "1433504694529167360", // CS:2
+  "1442591687833550961", // Roblox
+  "1428813333192118396", // Valorant
+  "1442591285109067816", // Fornite
   "1400578107823489024", // Creator  
 ];
 
@@ -113,6 +116,9 @@ const BUTTON_ROLE_MAP = {
   "pickgame:warzone": "1433504552140673105",
   "pickgame:metin2": "1433504646357586062",
   "pickgame:cs2": "1433504694529167360",
+  "pickgame:fortnite": "1442591285109067816",
+  "pickgame:valorant": "1428813333192118396",
+  "pickgame:roblox": "1442591687833550961",
   "pickgame:others": "1433504443269255399",
 };
 
@@ -769,17 +775,71 @@ const embed = new EmbedBuilder()
   .setColor(config.welcomeFlow?.greetingEmbed?.color || "#3a3838")
   .setThumbnail(member.user.displayAvatarURL({ dynamic: true }));
 
-        const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("pickgame:wildrift").setLabel("🎮WildRift").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("pickgame:warzone").setLabel("🔫Warzone").setStyle(ButtonStyle.Danger),
-          new ButtonBuilder().setCustomId("pickgame:metin2").setLabel("⚔️Metin2").setStyle(ButtonStyle.Success),
-          new ButtonBuilder().setCustomId("pickgame:cs2").setLabel("🔫CS:2").setStyle(ButtonStyle.Secondary),
-          new ButtonBuilder().setCustomId("pickgame:others").setLabel("👀Others").setStyle(ButtonStyle.Secondary)
-        );
+// --- nové tlačítka ---
+const btnFortnite = new ButtonBuilder()
+  .setCustomId("pickgame:fortnite")
+  .setLabel("Fortnite")
+  .setEmoji({ id: "1442580400202584228", name: "fortnite" })
+  .setStyle(ButtonStyle.Secondary);
 
-        await welcomeEmbedChannel.send({ embeds: [embed], components: [row] }).catch(() => {});
-      }
-    }
+const btnValorant = new ButtonBuilder()
+  .setCustomId("pickgame:valorant")
+  .setLabel("Valorant")
+  .setEmoji({ id: "1442580564170510418", name: "valorant" })
+  .setStyle(ButtonStyle.Secondary);
+
+const btnRoblox = new ButtonBuilder()
+  .setCustomId("pickgame:roblox")
+  .setLabel("Roblox")
+  .setEmoji({ id: "1442580463460941997", name: "roblox" })
+  .setStyle(ButtonStyle.Secondary);
+
+// --- 1. řada (WildRift → Fortnite → Warzone → Valorant → Roblox) ---
+const row1 = new ActionRowBuilder().addComponents(
+  new ButtonBuilder()
+    .setCustomId("pickgame:wildrift")
+    .setLabel("WildRift")
+    .setEmoji({ id: "1442583007931269262", name: "wildrift" })
+    .setStyle(ButtonStyle.Secondary),
+
+  btnFortnite,
+
+  new ButtonBuilder()
+    .setCustomId("pickgame:warzone")
+    .setLabel("Warzone")
+    .setEmoji({ id: "1442582053618192456", name: "warzone" })
+    .setStyle(ButtonStyle.Secondary),
+
+  btnValorant,
+
+  btnRoblox
+);
+
+// --- 2. řada (CS2 → Metin2 → Others) ---
+const row2 = new ActionRowBuilder().addComponents(
+  new ButtonBuilder()
+    .setCustomId("pickgame:cs2")
+    .setLabel("CS:2")
+    .setEmoji({ id: "1421649819621134356", name: "cs2" })
+    .setStyle(ButtonStyle.Secondary),
+
+  new ButtonBuilder()
+    .setCustomId("pickgame:metin2")
+    .setLabel("Metin2")
+    .setEmoji({ id: "1442579930234884116", name: "metin2" })
+    .setStyle(ButtonStyle.Secondary),
+
+  new ButtonBuilder()
+    .setCustomId("pickgame:others")
+    .setLabel("Others")
+    .setEmoji({ id: "1442600123606503494", name: "others" })
+    .setStyle(ButtonStyle.Primary)
+);
+
+// --- poslání embedu ---
+await welcomeEmbedChannel
+  .send({ embeds: [embed], components: [row1, row2] })
+  .catch(() => {});
 
     // IDs z configu
     const unverifiedRoleId = config.channelsAndRoles?.unverifiedRoleId;
