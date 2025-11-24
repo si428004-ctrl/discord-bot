@@ -810,13 +810,14 @@ const row1 = new ActionRowBuilder().addComponents(
     .setEmoji({ id: "1442582053618192456", name: "warzone" })
     .setStyle(ButtonStyle.Secondary),
 
-  btnValorant,
+  btnValorant
 
-  btnRoblox
 );
 
 // --- 2. řada (CS2 → Metin2 → Others) ---
 const row2 = new ActionRowBuilder().addComponents(
+  btnRoblox,
+
   new ButtonBuilder()
     .setCustomId("pickgame:cs2")
     .setLabel("CS:2")
